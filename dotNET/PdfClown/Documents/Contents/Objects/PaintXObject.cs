@@ -32,6 +32,7 @@ using SkiaSharp;
 using System;
 using PdfClown.Documents.Contents.XObjects;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace PdfClown.Documents.Contents.Objects
 {
@@ -101,6 +102,13 @@ namespace PdfClown.Documents.Contents.Objects
                     SKPixmap.Encode(stream, b, SKEncodedImageFormat.Png, 100);
                 }
             };
+        }
+        public static void DumpImage(SKBitmap b)
+        {
+            using (var stream = new SKFileWStream($"dump_{DateTime.UtcNow.Ticks}_{Guid.NewGuid()}.png"))
+            {
+                SKPixmap.Encode(stream, b, SKEncodedImageFormat.Png, 100);
+            }
         }
         public override void Scan(GraphicsState state)
         {
@@ -196,15 +204,27 @@ namespace PdfClown.Documents.Contents.Objects
                     canvas.Concat(ref translate);
                     var formMatrix = formObject.Matrix;
                     canvas.Concat(ref formMatrix);
-                    
+
                     var picture = formObject.Render();
                     // DumpImage(picture);
 
-                    if (state.AlphaShape is object) {
+                    canvas.DrawPicture(picture);
+                    if (state.AlphaShape is object)
+                    {
 
-                        var newState = new GraphicsState(new ContentScanner(new FormXObject(state.AlphaShape), state.Scanner));
-                        state.CopyTo(newState);
-                        newState.Scanner.Render(newState.Scanner.RenderContext, new SKSize(formObject.Box.Width, formObject.Box.Height));
+                        var formObj = new FormXObject(state.AlphaShape);
+                        using (var bitmap = new SKBitmap((int)Math.Floor(formObj.Box.Width), (int)Math.Floor(formObj.Box.Height)))
+                        using (var tmpCanvas = new SKCanvas(bitmap))
+                        {
+                            var newState = new GraphicsState(new ContentScanner(formObj, tmpCanvas, formObj.Size));
+                            state.CopyTo(newState);
+                            //var img2 = img.LoadImage(newState);
+                            newState.Scanner.Render(newState.Scanner.RenderContext, new SKSize(formObject.Box.Width, formObject.Box.Height));
+
+                            tmpCanvas.Flush();
+                            DumpImage(bitmap);
+                            ApplyMask(canvas, bitmap, formObj.Box.Left, formObj.Box.Top);
+                        }
                     }
 
                     //if (state.AlphaShape is object)
@@ -223,7 +243,6 @@ namespace PdfClown.Documents.Contents.Objects
                     //    }
                     //}
 
-                    canvas.DrawPicture(picture);
                 }
             }
             finally
@@ -235,5 +254,26 @@ namespace PdfClown.Documents.Contents.Objects
         #endregion
         #endregion
         #endregion
+
+        public SKBitmap ApplyMask(SKCanvas canvas, SKBitmap alphaMask, float left, float top)
+        {
+            SKBitmap target = new SKBitmap(alphaMask.Width, alphaMask.Height, false);
+            var size = new SKSize(alphaMask.Width, alphaMask.Height);
+
+            if (target.InstallMaskPixels(SKMask.Create(alphaMask.Bytes, new SKRectI(0, 0, alphaMask.Width, alphaMask.Height), (uint)alphaMask.RowBytes, SKMaskFormat.A8)))
+            {
+
+            }
+            else
+            {
+
+            }
+            DumpImage(target);
+            canvas.DrawBitmap(target, 0, 0, new SKPaint
+            {
+                
+            });
+            return target;
+        }
     }
 }
