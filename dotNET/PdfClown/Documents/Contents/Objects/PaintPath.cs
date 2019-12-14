@@ -29,6 +29,7 @@ using PdfClown.Util;
 
 using System.Collections.Generic;
 using SkiaSharp;
+using PdfClown.Documents.Contents.XObjects;
 
 namespace PdfClown.Documents.Contents.Objects
 {
@@ -223,7 +224,37 @@ namespace PdfClown.Documents.Contents.Objects
                             }
                         }
                     }
-                    context.DrawPath(pathObject, paint);
+
+
+                    using (var filter = SKMaskFilter.CreateBlur(SKBlurStyle.Inner, 5.0f))
+                    {
+                        //paint.MaskFilter = filter;
+
+                        context.DrawPath(pathObject, paint);
+                    }
+
+                    if (state.AlphaShape is object)
+                    {
+                        var alphaObject = new FormXObject(state.AlphaShape);
+
+                        var newState = new GraphicsState(new ContentScanner(alphaObject));
+                        state.CopyTo(newState);
+
+                        newState.BlendMode = new[] { BlendModeEnum.Normal };
+                        newState.Scanner.Render(context, new SKSize(context.DeviceClipBounds.Width, context.DeviceClipBounds.Height));
+
+                    }
+
+                    //if (state.AlphaShape is object)
+                    //{
+                    //    using (var bitmap = SKBitmap.Decode(state.AlphaShape))
+                    //    {
+                    //        context.DrawBitmap(bitmap, 0, 0, new SKPaint()
+                    //        {
+                    //            BlendMode = SKBlendMode.SrcIn
+                    //        });
+                    //    }
+                    //}
                 }
                 if (stroked)
                 {

@@ -30,6 +30,8 @@ using PdfClown.Objects;
 using System.Collections.Generic;
 using SkiaSharp;
 using System;
+using PdfClown.Documents.Contents.XObjects;
+using System.Linq;
 
 namespace PdfClown.Documents.Contents.Objects
 {
@@ -42,7 +44,7 @@ namespace PdfClown.Documents.Contents.Objects
         #region static
         #region fields
         public static readonly string OperatorKeyword = "Do";
-        public static readonly SKPaint ImagePaint = new SKPaint { FilterQuality = SKFilterQuality.Low };
+        public static readonly SKPaint ImagePaint = new SKPaint { FilterQuality = SKFilterQuality.High };
         #endregion
         #endregion
 
@@ -87,7 +89,19 @@ namespace PdfClown.Documents.Contents.Objects
             get => (PdfName)operands[0];
             set => operands[0] = value;
         }
+        public static void DumpImage(SKPicture picture)
+        {
+            using (var stream = new SKFileWStream($"dump_{DateTime.UtcNow.Ticks}_{Guid.NewGuid()}.png"))
+            {
+                using (var b = new SKBitmap((int)Math.Ceiling(picture.CullRect.Width), (int)Math.Ceiling(picture.CullRect.Height)))
+                using (var canvas = new SKCanvas(b))
+                {
+                    canvas.DrawPicture(picture);
 
+                    SKPixmap.Encode(stream, b, SKEncodedImageFormat.Png, 100);
+                }
+            };
+        }
         public override void Scan(GraphicsState state)
         {
             var scanner = state.Scanner;
@@ -109,6 +123,64 @@ namespace PdfClown.Documents.Contents.Objects
                         SKMatrix.PreConcat(ref imageMatrix, SKMatrix.MakeTranslation(0, -size.Height));
                         canvas.Concat(ref imageMatrix);
 
+                        if (state.BlendMode.Any())
+                        {
+                            switch (state.BlendMode[0])
+                            {
+                                case BlendModeEnum.Multiply:
+                                    ImagePaint.BlendMode = SKBlendMode.Multiply;
+                                    break;
+                                case BlendModeEnum.Lighten:
+                                    ImagePaint.BlendMode = SKBlendMode.Lighten;
+                                    break;
+                                case BlendModeEnum.Luminosity:
+                                    ImagePaint.BlendMode = SKBlendMode.Luminosity;
+                                    break;
+                                case BlendModeEnum.Overlay:
+                                    ImagePaint.BlendMode = SKBlendMode.Overlay;
+                                    break;
+                                case BlendModeEnum.Normal:
+                                    ImagePaint.BlendMode = SKBlendMode.SrcOver;
+                                    break;
+                                case BlendModeEnum.ColorBurn:
+                                    ImagePaint.BlendMode = SKBlendMode.ColorBurn;
+                                    break;
+                                case BlendModeEnum.Screen:
+                                    ImagePaint.BlendMode = SKBlendMode.Screen;
+                                    break;
+                                case BlendModeEnum.Darken:
+                                    ImagePaint.BlendMode = SKBlendMode.Darken;
+                                    break;
+                                case BlendModeEnum.ColorDodge:
+                                    ImagePaint.BlendMode = SKBlendMode.ColorDodge;
+                                    break;
+                                case BlendModeEnum.Compatible:
+                                    ImagePaint.BlendMode = SKBlendMode.SrcOver;
+                                    break;
+                                case BlendModeEnum.HardLight:
+                                    ImagePaint.BlendMode = SKBlendMode.HardLight;
+                                    break;
+                                case BlendModeEnum.SoftLight:
+                                    ImagePaint.BlendMode = SKBlendMode.SoftLight;
+                                    break;
+                                case BlendModeEnum.Difference:
+                                    ImagePaint.BlendMode = SKBlendMode.Difference;
+                                    break;
+                                case BlendModeEnum.Exclusion:
+                                    ImagePaint.BlendMode = SKBlendMode.Exclusion;
+                                    break;
+                                case BlendModeEnum.Hue:
+                                    ImagePaint.BlendMode = SKBlendMode.Hue;
+                                    break;
+                                case BlendModeEnum.Saturation:
+                                    ImagePaint.BlendMode = SKBlendMode.Saturation;
+                                    break;
+                                case BlendModeEnum.Color:
+                                    ImagePaint.BlendMode = SKBlendMode.Color;
+                                    break;
+                            }
+                        }
+
                         canvas.DrawBitmap(image, 0, 0, ImagePaint);
                         //using (var surf = SKSurface.Create(canvas.GRContext, true, new SKImageInfo(image.Width, image.Height)))
                         //{
@@ -124,8 +196,33 @@ namespace PdfClown.Documents.Contents.Objects
                     canvas.Concat(ref translate);
                     var formMatrix = formObject.Matrix;
                     canvas.Concat(ref formMatrix);
-
+                    
                     var picture = formObject.Render();
+                    // DumpImage(picture);
+
+                    if (state.AlphaShape is object) {
+
+                        var newState = new GraphicsState(new ContentScanner(new FormXObject(state.AlphaShape), state.Scanner));
+                        state.CopyTo(newState);
+                        newState.Scanner.Render(newState.Scanner.RenderContext, new SKSize(formObject.Box.Width, formObject.Box.Height));
+                    }
+
+                    //if (state.AlphaShape is object)
+                    //{
+                    //    System.IO.File.WriteAllBytes("raw alpha", state.AlphaShape);
+                    //    using (var bitmap = SKBitmap.Decode(state.AlphaShape, new SKImageInfo
+                    //    {
+                    //        AlphaType = SKAlphaType.Opaque,
+                    //        ColorType = SKColorType.Alpha8
+                    //    }))
+                    //    {
+                    //        canvas.DrawBitmap(bitmap, 0, 0, new SKPaint()
+                    //        {
+                    //            BlendMode = SKBlendMode.SrcIn
+                    //        });
+                    //    }
+                    //}
+
                     canvas.DrawPicture(picture);
                 }
             }

@@ -146,6 +146,10 @@ namespace PdfClown.Documents.Contents
             for (int i = 0; i < componentsCount; i++)
             {
                 var value = componentIndex < buffer.Length ? buffer[componentIndex] : 0;
+                if(value > 0)
+                {
+
+                }
                 var interpolate = min + (value * ((max - min) / maximum));//indexed ? value : 
                 components.Add(indexed
                     ? (PdfDirectObject)new PdfInteger((int)interpolate)
@@ -179,21 +183,22 @@ namespace PdfClown.Documents.Contents
                 {
                     var index = (y * info.Width + x);
                     var color = GetColor(index);
-
+                    
                     var skColor = colorSpace.GetColor(color, null);
+
                     if (sMaskLoader != null)
                     {
                         var sMaskColor = sMaskLoader.GetColor(index);
                         //alfa
                         skColor = skColor.WithAlpha((byte)(((IPdfNumber)sMaskColor.Components[0]).DoubleValue * 255));
                         //shaping
-                        //for (int i = 0; i < color.Components.Count; i++)
-                        //{
-                        //    var m = sMaskLoader.matte == null ? 0D : ((IPdfNumber)sMaskLoader.matte[i]).DoubleValue;
-                        //    var a = ((IPdfNumber)sMaskColor.Components[sMaskColor.Components.Count == color.Components.Count ? i : 0]).DoubleValue;
-                        //    var c = ((IPdfNumber)color.Components[i]).DoubleValue;
-                        //    color.Components[i] = new PdfReal(m + a * (c - m));
-                        //}
+                        for (int i = 0; i < color.Components.Count; i++)
+                        {
+                            var m = sMaskLoader.matte == null ? 0D : ((IPdfNumber)sMaskLoader.matte[i]).DoubleValue;
+                            var a = ((IPdfNumber)sMaskColor.Components[sMaskColor.Components.Count == color.Components.Count ? i : 0]).DoubleValue;
+                            var c = ((IPdfNumber)color.Components[i]).DoubleValue;
+                            color.Components[i] = new PdfReal(m + a * (c - m));
+                        }
                     }
                     raster[index] = (int)(uint)skColor;//bitmap.SetPixel(x, y, skColor);
                 }

@@ -25,11 +25,14 @@
 
 using PdfClown.Documents;
 using PdfClown.Documents.Contents.Fonts;
+using PdfClown.Documents.Contents.Objects;
 using PdfClown.Documents.Contents.Scanner;
+using PdfClown.Documents.Contents.Tokens;
 using PdfClown.Objects;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace PdfClown.Documents.Contents
 {
@@ -101,8 +104,43 @@ namespace PdfClown.Documents.Contents
                 { state.BlendMode = BlendMode; }
                 else if (parameterName.Equals(PdfName.Type))
                 { }
+                else if (parameterName.Equals(PdfName.SMask))
+                {
+                    state.AlphaShape = SoftMask;
+                }
+                else
+                {
+                    Debug.WriteLine($"Unsupported '{parameterName}'");
+                }
                 //TODO:extend supported parameters!!!
             }
+        }
+
+        [PDF(VersionEnum.PDF14)]
+        public PdfDirectObject SoftMask
+        {
+            get
+            {
+                var sMask = BaseDataObject[PdfName.SMask];
+                if (sMask is PdfReference reference)
+                {
+                    var a = reference.Resolve() as PdfDictionary;
+                    
+                    var o = a[PdfName.G];
+                    var p = o as PdfReference;
+                    return p;
+                    var u = p.Resolve() as PdfStream;
+                    
+                    var buffer = u.GetBody(true);
+                    var x = buffer.ToByteArray();
+                    var c = new ContentParser(x);
+                    var pdfObject = c.ParseContentObject();
+                    //return pdfObject;
+                }
+                return null;
+                //return number == null ? null : (double?)number.DoubleValue;
+            }
+            set => BaseDataObject[PdfName.SMask] = null;// PdfReal.Get(value);
         }
 
         /**

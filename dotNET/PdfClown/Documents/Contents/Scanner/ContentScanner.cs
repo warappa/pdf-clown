@@ -32,6 +32,9 @@ using System.Collections;
 using System.Collections.Generic;
 using SkiaSharp;
 using PdfClown.Documents.Contents.Scanner;
+using PdfClown.Objects;
+using PdfClown.Documents.Contents.Tokens;
+using PdfClown.Documents.Contents.XObjects;
 
 namespace PdfClown.Documents.Contents
 {
@@ -350,12 +353,29 @@ Parent level.
             // Scanning the current graphics state...
             ContentObject currentObject = Current;
             if (currentObject != null)
-            { currentObject.Scan(state); }
+            { 
+                currentObject.Scan(state);
+
+                //if (state.AlphaShape is object)
+                //{
+                //    var alphaObject = new FormXObject(state.AlphaShape);
+
+                //    var newState = new GraphicsState(new ContentScanner(alphaObject));
+                //    state.CopyTo(newState);
+
+                //    newState.BlendMode = new[] { BlendModeEnum.Normal };
+                //    newState.Scanner.Render(RenderContext, ContextSize);
+
+                //    //    if (!objects.Contains(state.AlphaShape))
+                //    //    {
+                //    //        objects.Add(state.AlphaShape);
+                //    //    }
+                //}
+            }
 
             // Moving to the next object...
             if (index < objects.Count)
             { index++; Refresh(); }
-
             return Current != null;
         }
 
