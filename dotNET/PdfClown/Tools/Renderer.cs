@@ -149,7 +149,7 @@ namespace PdfClown.Tools
               (int)size.Width,
               (int)size.Height,
               SKColorType.Rgba8888,
-              SKAlphaType.Opaque
+              SKAlphaType.Premul
               //PixelFormat.Format24bppRgb
               );
             using (var canvas = new SKCanvas(image))

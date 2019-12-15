@@ -233,9 +233,9 @@ namespace PdfClown.Documents.Contents.Objects
                         context.DrawPath(pathObject, paint);
                     }
 
-                    if (state.AlphaShape is object)
+                    if (state.SMask is object)
                     {
-                        var alphaObject = new FormXObject(state.AlphaShape);
+                        var alphaObject = new FormXObject(state.SMask);
 
                         var newState = new GraphicsState(new ContentScanner(alphaObject));
                         state.CopyTo(newState);

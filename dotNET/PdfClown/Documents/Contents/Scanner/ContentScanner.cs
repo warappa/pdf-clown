@@ -441,7 +441,6 @@ Parent level.
                 {
                     renderContext.DrawRect(SKRect.Create(renderSize), paint);
                 }
-
             }
 
             try

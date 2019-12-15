@@ -157,6 +157,9 @@
   <PropertyGroup>
     <RestoreSources>../FreeImage.NETCore/Package;$(RestoreSources);</RestoreSources>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="BitMiracle.LibTiff.NET" Version="2.4.633" />
     <PackageReference Include="SkiaSharp" Version="1.68.0" />

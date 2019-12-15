@@ -106,7 +106,11 @@ namespace PdfClown.Documents.Contents
                 { }
                 else if (parameterName.Equals(PdfName.SMask))
                 {
-                    state.AlphaShape = SoftMask;
+                    state.SMask = SoftMask;
+                }
+                else if (parameterName.Equals(PdfName.AIS))
+                {
+                    state.AlphaShape = AlphaShape;
                 }
                 else
                 {

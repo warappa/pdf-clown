@@ -33,6 +33,7 @@ using System;
 using PdfClown.Documents.Contents.XObjects;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 namespace PdfClown.Documents.Contents.Objects
 {
@@ -206,42 +207,38 @@ namespace PdfClown.Documents.Contents.Objects
                     canvas.Concat(ref formMatrix);
 
                     var picture = formObject.Render();
-                    // DumpImage(picture);
+                    DumpImage(picture);
 
-                    canvas.DrawPicture(picture);
-                    if (state.AlphaShape is object)
+                    canvas.DrawPicture(picture, new SKPaint
                     {
+                        //BlendMode = SKBlendMode.Overlay
 
-                        var formObj = new FormXObject(state.AlphaShape);
-                        using (var bitmap = new SKBitmap((int)Math.Floor(formObj.Box.Width), (int)Math.Floor(formObj.Box.Height)))
-                        using (var tmpCanvas = new SKCanvas(bitmap))
+                    });
+
+
+                    if (state.SMask is object)
+                    {
+                        var formObj = new FormXObject(state.SMask);
+                        var width = (int)Math.Floor(Math.Abs(formObj.Size.Width));
+                        var height = (int)Math.Floor(Math.Abs(formObj.Size.Height));
+                        var size = new SKSize(width, height);
+                        using (var alphaMask = new SKBitmap(width, height,
+                            SKColorType.Alpha8, SKAlphaType.Opaque))
+                        using (var canvasAlphaMask = new SKCanvas(alphaMask))
                         {
-                            var newState = new GraphicsState(new ContentScanner(formObj, tmpCanvas, formObj.Size));
+                            canvasAlphaMask.Clear(SKColor.Parse("#00000000"));
+                            var newState = new GraphicsState(new ContentScanner(formObj, canvasAlphaMask, size));
                             state.CopyTo(newState);
+                            newState.Scanner.ClearContext = false;
+                            newState.Scanner.RenderContext.Clear(SKColors.Transparent);
                             //var img2 = img.LoadImage(newState);
                             newState.Scanner.Render(newState.Scanner.RenderContext, new SKSize(formObject.Box.Width, formObject.Box.Height));
 
-                            tmpCanvas.Flush();
-                            DumpImage(bitmap);
-                            ApplyMask(canvas, bitmap, formObj.Box.Left, formObj.Box.Top);
+                            canvasAlphaMask.Flush();
+                            //DumpImage(alphaMask);
+                            ApplyMask(canvas, alphaMask, formObj.Box.Left, formObj.Box.Top);
                         }
                     }
-
-                    //if (state.AlphaShape is object)
-                    //{
-                    //    System.IO.File.WriteAllBytes("raw alpha", state.AlphaShape);
-                    //    using (var bitmap = SKBitmap.Decode(state.AlphaShape, new SKImageInfo
-                    //    {
-                    //        AlphaType = SKAlphaType.Opaque,
-                    //        ColorType = SKColorType.Alpha8
-                    //    }))
-                    //    {
-                    //        canvas.DrawBitmap(bitmap, 0, 0, new SKPaint()
-                    //        {
-                    //            BlendMode = SKBlendMode.SrcIn
-                    //        });
-                    //    }
-                    //}
 
                 }
             }
@@ -254,26 +251,107 @@ namespace PdfClown.Documents.Contents.Objects
         #endregion
         #endregion
         #endregion
-
-        public SKBitmap ApplyMask(SKCanvas canvas, SKBitmap alphaMask, float left, float top)
+        public static SkiaSharp.SKBlendMode CurrentBlendMode = SkiaSharp.SKBlendMode.Clear;
+        public void ApplyMask(SKCanvas canvas, SKBitmap alphaMask, float left, float top)
         {
-            SKBitmap target = new SKBitmap(alphaMask.Width, alphaMask.Height, false);
-            var size = new SKSize(alphaMask.Width, alphaMask.Height);
+            //alphaMask = FillBitmapUintBuffer(alphaMask);
 
-            if (target.InstallMaskPixels(SKMask.Create(alphaMask.Bytes, new SKRectI(0, 0, alphaMask.Width, alphaMask.Height), (uint)alphaMask.RowBytes, SKMaskFormat.A8)))
+            //using (var target = new SKBitmap(alphaMask.Width, alphaMask.Height, SKColorType.Rgba8888, SKAlphaType.Premul))
+            //using (var alphaMaskCanvas = new SKCanvas(alphaMask))
+            //using (var c = new SKCanvas(target))
             {
+                //var color = SKColor.Parse("#00ff0000");
+                //var color = SKColors.Black;
+                //c.Clear(color);
 
+                //var mask = SKMask.Create(alphaMask.Bytes, new SKRectI(0, 0, alphaMask.Width, alphaMask.Height), (uint)alphaMask.RowBytes, SKMaskFormat.A8);
+
+                //if (!target.InstallMaskPixels(mask))
+                //{
+                //    throw new Exception("");
+                //}
+                //canvas.DrawRect(0, 0, 100, 100, new SKPaint
+                //{
+                //    Color = SKColor.Parse("50ff0050"),
+                //   IsDither=true,
+                //   Style= SKPaintStyle.Fill,
+                //   BlendMode=  SKBlendMode.Difference
+                //});
+
+                var normalTable = new byte[256];
+                var invertTable = new byte[256];
+
+                for (var i = 0; i < 256; i++)
+                {
+                    normalTable[i] = (byte)i;
+                    invertTable[i] = (byte)(255 - i);
+                }
+
+                var paint = new SKPaint
+                {
+                    BlendMode = PaintXObject.CurrentBlendMode,
+                    //ColorFilter = SKColorFilter.CreateTable(normalTable, normalTable, normalTable, normalTable)
+                    MaskFilter = SKMaskFilter.CreateTable(invertTable)
+                };
+                canvas.DrawBitmap(alphaMask, 0, 0, paint);
+
+                //DumpImage(target);
             }
-            else
-            {
-
-            }
-            DumpImage(target);
-            canvas.DrawBitmap(target, 0, 0, new SKPaint
-            {
-                
-            });
-            return target;
         }
+        //        SKBitmap FillBitmapUintBuffer(SKBitmap alphaMask)
+        //        {
+        //            SKBitmap bitmap = new SKBitmap(alphaMask.Width, alphaMask.Height);
+        //            var srcBuffer = alphaMask.GetPixels();
+        //            uint[,] buffer = new uint[alphaMask.Height, alphaMask.Width];
+        //unsafe
+        //            {
+        //                byte* srcPtr = (byte*)srcBuffer.ToPointer();
+        //                for (int row = 0; row < alphaMask.Height; row++)
+        //                    for (int col = 0; col < alphaMask.Width; col++)
+        //                    {
+        //                        var srcAdress = row * alphaMask.Width * 4 + col;
+        //                        buffer[row, col] = MakePixel(*(srcAdress + 0), *(srcAdress + 1), *(srcAdress + 2), *(srcAdress + 0));
+        //                    }
+
+
+        //                fixed (uint* ptr = buffer)
+        //                {
+        //                    bitmap.SetPixels((IntPtr)ptr);
+        //                }
+        //            }
+
+        //            return bitmap;
+        //        }
+
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //uint MakePixel(byte red, byte green, byte blue, byte alpha) =>
+        //        (uint)((alpha << 24) | (blue << 16) | (green << 8) | red);
+
+        //SKBitmap FillBitmapUintBuffer(SKBitmap alphaMask)
+        //{
+        //    SKBitmap bitmap = new SKBitmap(256, 256);
+
+        //    stopwatch.Restart();
+
+        //    uint[,] buffer = new uint[256, 256];
+
+        //    for (int rep = 0; rep < REPS; rep++)
+        //        for (int row = 0; row < 256; row++)
+        //            for (int col = 0; col < 256; col++)
+        //            {
+        //                buffer[row, col] = MakePixel((byte)col, 0, (byte)row, 0xFF);
+        //            }
+
+        //    unsafe
+        //    {
+        //        fixed (uint* ptr = buffer)
+        //        {
+        //            bitmap.SetPixels((IntPtr)ptr);
+        //        }
+        //    }
+
+        //    milliseconds = (int)stopwatch.ElapsedMilliseconds;
+        //    return bitmap;
+        //}
     }
 }

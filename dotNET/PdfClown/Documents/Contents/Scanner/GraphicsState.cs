@@ -398,7 +398,8 @@ namespace PdfClown.Documents.Contents
 
         public double? StrokeAlpha { get; internal set; }
         public double? FillAlpha { get; internal set; }
-        public PdfDirectObject AlphaShape { get; internal set; }
+        public bool AlphaShape { get; internal set; }
+        public PdfDirectObject SMask { get; internal set; }
 
         #endregion
 
@@ -433,7 +434,7 @@ namespace PdfClown.Documents.Contents
             strokeColorSpace = colors::DeviceGrayColorSpace.Default;
             TextState = new TextGraphicsState();
             wordSpace = 0;
-            AlphaShape = null;
+            SMask = null;
 
             // Rendering context initialization.
             Scanner.RenderContext?.SetMatrix(ctm);
@@ -484,7 +485,7 @@ namespace PdfClown.Documents.Contents
             state.strokeColorSpace = strokeColorSpace;
             state.TextState = textState;
             state.wordSpace = wordSpace;
-            state.AlphaShape = AlphaShape;
+            state.SMask = SMask;
         }
 
 
