@@ -35,6 +35,8 @@ using PdfClown.Documents.Contents.Scanner;
 using PdfClown.Objects;
 using PdfClown.Documents.Contents.Tokens;
 using PdfClown.Documents.Contents.XObjects;
+using System.Diagnostics;
+using System.Linq;
 
 namespace PdfClown.Documents.Contents
 {
@@ -343,7 +345,11 @@ Parent level.
 
             return Current != null;
         }
-
+        public static int counter = 0;
+        public static string[] blacklist = new[] { "DrawLine", "DrawCurve", "ModifyCTM", "SetLineCap", "SetLineJoin",
+                    "SetLineWidth","Text", "ShowAdjustedText", "SetTextMatrix", "SetWordSpace","SetCharSpace",
+                    "SetFont"
+                };
         /**
           <summary>Moves to the next object.</summary>
           <returns>Whether the next object was successfully reached.</returns>
@@ -353,9 +359,19 @@ Parent level.
             // Scanning the current graphics state...
             ContentObject currentObject = Current;
             if (currentObject != null)
-            { 
+            {
+                if (counter == 1789)
+                {
+                }
                 currentObject.Scan(state);
+                counter++;
+                var type = currentObject.GetType().Name;
 
+                if (counter >= 1771 && counter < 1802)// !blacklist.Contains(type))
+                {
+                    //Debug.WriteLine($"Scanned {counter} {type}");
+                    //Tools.Renderer.DumpCanvas(renderContext, $"Scanned {counter} {type}.png");
+                }
                 //if (state.AlphaShape is object)
                 //{
                 //    var alphaObject = new FormXObject(state.AlphaShape);
@@ -437,7 +453,7 @@ Parent level.
             if (IsRootLevel() && ClearContext)
             {
                 //renderContext.ClipRect(SKRect.Create(renderSize));
-                using (var paint = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Fill })
+                using (var paint = new SKPaint { Color = SKColors.Transparent, Style = SKPaintStyle.Fill })
                 {
                     renderContext.DrawRect(SKRect.Create(renderSize), paint);
                 }

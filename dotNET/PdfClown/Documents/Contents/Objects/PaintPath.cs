@@ -30,6 +30,7 @@ using PdfClown.Util;
 using System.Collections.Generic;
 using SkiaSharp;
 using PdfClown.Documents.Contents.XObjects;
+using PdfClown.Documents.Contents.ColorSpaces;
 
 namespace PdfClown.Documents.Contents.Objects
 {
@@ -162,6 +163,7 @@ namespace PdfClown.Documents.Contents.Objects
                 }
                 if (filled)
                 {
+                    var isCMYK = state.FillColorSpace == DeviceCMYKColorSpace.Default;
                     pathObject.FillType = fillMode.ToSkia();
                     var paint = state.FillColorSpace.GetPaint(state.FillColor, state.FillAlpha);
                     if ((state.BlendMode?.Count ?? 0) > 0)
@@ -225,25 +227,7 @@ namespace PdfClown.Documents.Contents.Objects
                         }
                     }
 
-
-                    using (var filter = SKMaskFilter.CreateBlur(SKBlurStyle.Inner, 5.0f))
-                    {
-                        //paint.MaskFilter = filter;
-
-                        context.DrawPath(pathObject, paint);
-                    }
-
-                    if (state.SMask is object)
-                    {
-                        var alphaObject = new FormXObject(state.SMask);
-
-                        var newState = new GraphicsState(new ContentScanner(alphaObject));
-                        state.CopyTo(newState);
-
-                        newState.BlendMode = new[] { BlendModeEnum.Normal };
-                        newState.Scanner.Render(context, new SKSize(context.DeviceClipBounds.Width, context.DeviceClipBounds.Height));
-
-                    }
+                    context.DrawPath(pathObject, paint);
 
                     //if (state.AlphaShape is object)
                     //{

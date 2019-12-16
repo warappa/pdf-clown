@@ -71,6 +71,20 @@ namespace PdfClown.Documents.Contents
             set => BaseDataObject[PdfName.AIS] = PdfBoolean.Get(value);
         }
 
+        [PDF(VersionEnum.PDF14)]
+        public bool? Overprint
+        {
+            get => (bool)PdfSimpleObject<object>.GetValue(BaseDataObject[PdfName.OP], null);
+            set => BaseDataObject[PdfName.OP] = PdfBoolean.Get(value);
+        }
+
+        [PDF(VersionEnum.PDF14)]
+        public int? OverprintMode
+        {
+            get => (int)PdfSimpleObject<object>.GetValue(BaseDataObject[PdfName.OPM], null);
+            set => BaseDataObject[PdfName.OP] = PdfBoolean.Get(value);
+        }
+
         public void ApplyTo(GraphicsState state)
         {
             foreach (PdfName parameterName in BaseDataObject.Keys)
@@ -82,12 +96,12 @@ namespace PdfClown.Documents.Contents
                 }
                 else if (parameterName.Equals(PdfName.CA))
                 {
-                    if (!AlphaShape)
+                    //if (!AlphaShape)
                         state.StrokeAlpha = StrokeAlpha;
                 }
                 else if (parameterName.Equals(PdfName.ca))
                 {
-                    if (!AlphaShape)
+                    //if (!AlphaShape)
                         state.FillAlpha = FillAlpha;
                 }
                 else if (parameterName.Equals(PdfName.LC))
@@ -111,6 +125,20 @@ namespace PdfClown.Documents.Contents
                 else if (parameterName.Equals(PdfName.AIS))
                 {
                     state.AlphaShape = AlphaShape;
+                }
+                else if (parameterName.Equals(PdfName.OP))
+                {
+                    state.OverprintStroke = Overprint;
+                    state.OverprintPaint = Overprint;
+                }
+                else if (parameterName.Equals(PdfName.op))
+                {
+                    state.OverprintPaint = false;
+                    
+                }
+                else if (parameterName.Equals(PdfName.OPM))
+                {
+                    state.OverprintMode = OverprintMode;
                 }
                 else
                 {
@@ -140,6 +168,16 @@ namespace PdfClown.Documents.Contents
                     var c = new ContentParser(x);
                     var pdfObject = c.ParseContentObject();
                     //return pdfObject;
+                }
+                else if (sMask is PdfName none)
+                {
+                    var o = File.Document.Resources.Get<PdfClown.Documents.Contents.XObjects.XObject>(none);
+                    //var p = o as PdfReference;
+                    return null;
+                }
+                else
+                {
+                    throw new Exception("Not Supported SMask!" + sMask.GetType().Name);
                 }
                 return null;
                 //return number == null ? null : (double?)number.DoubleValue;

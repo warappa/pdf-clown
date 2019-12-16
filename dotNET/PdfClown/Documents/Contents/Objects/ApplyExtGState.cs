@@ -23,10 +23,12 @@
   this list of conditions.
 */
 
+using Newtonsoft.Json;
 using PdfClown.Bytes;
 using PdfClown.Objects;
 
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace PdfClown.Documents.Contents.Objects
 {
@@ -65,6 +67,11 @@ namespace PdfClown.Documents.Contents.Objects
         {
             ExtGState extGState = GetExtGState(state.Scanner.ContentContext);
             extGState.ApplyTo(state);
+            //Debug.WriteLine("Applied ExtGState: " + JsonConvert.SerializeObject(extGState.BaseDataObject, Formatting.Indented, new JsonSerializerSettings
+            //{
+            //    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+            //    MaxDepth=1
+            //}));
         }
 
         #region IResourceReference

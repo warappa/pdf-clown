@@ -30,6 +30,7 @@ using PdfClown.Objects;
 
 using System;
 using SkiaSharp;
+using System.Diagnostics;
 
 namespace PdfClown.Documents.Contents.XObjects
 {
@@ -56,6 +57,7 @@ namespace PdfClown.Documents.Contents.XObjects
                 return xobject;
 
             PdfName subtype = (PdfName)((PdfStream)baseObject.Resolve()).Header[PdfName.Subtype];
+            Debug.WriteLine($"SubType XObject: {subtype.StringValue}");
             if (PdfName.Form.Equals(subtype))
                 return FormXObject.Wrap(baseObject);
             else if (PdfName.Image.Equals(subtype))

@@ -597,8 +597,8 @@ namespace PdfClown.Documents.Interaction.Annotations
             SKMatrix.PreConcat(ref self, appearanceMatrix);
 
 
-            var picture = appearance.Render();
-            canvas.DrawPicture(picture, ref self);
+            //var picture = appearance.Render();
+            //canvas.DrawPicture(picture, ref self);
         }
 
         public virtual SKRect GetBounds(SKMatrix matrix)

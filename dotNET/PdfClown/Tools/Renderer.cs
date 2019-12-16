@@ -32,6 +32,8 @@ using PdfClown.Objects;
 
 using System.Collections.Generic;
 using SkiaSharp;
+using System;
+using System.Collections.Concurrent;
 
 namespace PdfClown.Tools
 {
@@ -153,8 +155,40 @@ namespace PdfClown.Tools
               //PixelFormat.Format24bppRgb
               );
             using (var canvas = new SKCanvas(image))
+            {
+                AssociateCanvasWithBitmap(canvas, image);
                 contentContext.Render(canvas, size);
+            }
             return image;
+        }
+
+        private static ConcurrentDictionary<SKCanvas, SKBitmap> mapping = new ConcurrentDictionary<SKCanvas, SKBitmap>();
+        public static void AssociateCanvasWithBitmap(SKCanvas canvas, SKBitmap image)
+        {
+            mapping.TryAdd(canvas, image);
+        }
+        public static void DumpCanvas(SKCanvas canvas, string filename = null)
+        {
+            if (mapping.TryGetValue(canvas, out var image))
+            {
+                DumpImage(image, filename ?? $"canvas_dump_{DateTime.UtcNow.Ticks}_{Guid.NewGuid()}.png");
+            }
+            else
+            {
+            }
+        }
+
+        public static void DumpImage(SKBitmap image, string tmpOutput)
+        {
+            if (System.IO.File.Exists(tmpOutput))
+            {
+                System.IO.File.Delete(tmpOutput);
+            }
+
+            using (var stream = new SKFileWStream(tmpOutput))
+            {
+                SKPixmap.Encode(stream, image, SKEncodedImageFormat.Png, 100);
+            };
         }
         #endregion
         #endregion

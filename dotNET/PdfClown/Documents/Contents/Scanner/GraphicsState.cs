@@ -399,6 +399,9 @@ namespace PdfClown.Documents.Contents
         public double? StrokeAlpha { get; internal set; }
         public double? FillAlpha { get; internal set; }
         public bool AlphaShape { get; internal set; }
+        public bool? OverprintStroke { get; internal set; }
+        public bool? OverprintPaint { get; internal set; }
+        public int? OverprintMode { get; internal set; }
         public PdfDirectObject SMask { get; internal set; }
 
         #endregion
@@ -435,6 +438,9 @@ namespace PdfClown.Documents.Contents
             TextState = new TextGraphicsState();
             wordSpace = 0;
             SMask = null;
+            OverprintMode = null;
+            OverprintPaint = null;
+            OverprintStroke = null;
 
             // Rendering context initialization.
             Scanner.RenderContext?.SetMatrix(ctm);
@@ -486,6 +492,9 @@ namespace PdfClown.Documents.Contents
             state.TextState = textState;
             state.wordSpace = wordSpace;
             state.SMask = SMask;
+            state.OverprintMode = OverprintMode;
+            state.OverprintPaint = OverprintPaint;
+            state.OverprintStroke = OverprintStroke;
         }
 
 

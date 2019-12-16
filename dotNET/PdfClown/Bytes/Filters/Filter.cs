@@ -43,6 +43,7 @@ namespace PdfClown.Bytes.Filters
         private static readonly Filter CCITTFaxDecode = new CCITTFaxFilter();
         private static readonly Filter JBIG2Decode = new JBIG2Filter();
         private static readonly Filter JPXDecode = new JPXFilter();
+        private static readonly Filter DCTFilter = new DCTFilter();
         #endregion
 
         #region interface
@@ -82,7 +83,8 @@ namespace PdfClown.Bytes.Filters
                 return JBIG2Decode;
             else if (name.Equals(PdfName.DCTDecode)
               || name.Equals(PdfName.DCT))
-                throw new NotImplementedException("DCTDecode");
+                return DCTFilter;
+            //throw new NotImplementedException("DCTDecode");
             else if (name.Equals(PdfName.JPXDecode))
                 return JPXDecode;
             else if (name.Equals(PdfName.Crypt))

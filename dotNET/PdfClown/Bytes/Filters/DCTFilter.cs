@@ -22,17 +22,18 @@
   this list of conditions.
 */
 
-using FreeImageAPI;
 using PdfClown.Objects;
+using SkiaSharp;
+using System;
 using System.IO;
 
 namespace PdfClown.Bytes.Filters
 {
-    public sealed class JPXFilter : Filter
+    public sealed class DCTFilter : Filter
     {
         #region dynamic
         #region constructors
-        internal JPXFilter()
+        internal DCTFilter()
         { }
         #endregion
 
@@ -48,11 +49,16 @@ namespace PdfClown.Bytes.Filters
             using (var output = new MemoryStream())
             using (var input = new MemoryStream(data, offset, length))
             {
-                var bmp = FreeImage.LoadFromStream(input);
+                //var bmp = FreeImage.LoadFromStream(input);
 
-                FreeImage.SaveToStream(bmp, output, FREE_IMAGE_FORMAT.FIF_JPEG, FREE_IMAGE_SAVE_FLAGS.JPEG_OPTIMIZE);
+                //FreeImage.SaveToStream(bmp, output, FREE_IMAGE_FORMAT.FIF_JPEG, FREE_IMAGE_SAVE_FLAGS.JPEG_OPTIMIZE);
 
-                FreeImage.Unload(bmp);
+                //FreeImage.Unload(bmp);
+
+                using(var bitmap = SKBitmap.Decode(input))
+                {
+                    output.Write(bitmap.Bytes, 0, bitmap.Bytes.Length);
+                }
 
                 return output.ToArray();
             }
@@ -60,17 +66,7 @@ namespace PdfClown.Bytes.Filters
 
         public override byte[] Encode(byte[] data, int offset, int length, PdfDictionary parameters)
         {
-            using (var output = new MemoryStream())
-            using (var input = new MemoryStream(data, offset, length))
-            {
-                var bmp = FreeImage.LoadFromStream(input);
-
-                FreeImage.SaveToStream(bmp, output, FREE_IMAGE_FORMAT.FIF_JP2, FREE_IMAGE_SAVE_FLAGS.DEFAULT);
-
-                FreeImage.Unload(bmp);
-
-                return output.ToArray();
-            }
+            throw new NotImplementedException();
         }
         #endregion
 

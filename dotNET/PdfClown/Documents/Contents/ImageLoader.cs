@@ -19,6 +19,7 @@ namespace PdfClown.Documents.Contents
         {
             var buffer = imageObject.Data;
             var data = buffer.ToByteArray();
+
             var image = SKBitmap.Decode(data);
             if (image == null)
             {

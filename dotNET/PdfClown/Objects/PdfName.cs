@@ -414,6 +414,8 @@ namespace PdfClown.Objects
         public static readonly PdfName ON = new PdfName("ON");
         public static readonly PdfName OneColumn = new PdfName("OneColumn");
         public static readonly PdfName OP = new PdfName("OP");
+        public static readonly PdfName op = new PdfName("op");
+        public static readonly PdfName OPM = new PdfName("OPM");
         public static readonly PdfName Open = new PdfName("Open");
         public static readonly PdfName OpenAction = new PdfName("OpenAction");
         public static readonly PdfName OpenArrow = new PdfName("OpenArrow");

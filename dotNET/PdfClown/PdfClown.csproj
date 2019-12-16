@@ -154,14 +154,15 @@
     <EmbeddedResource Include="Assets\PushPin.svg" />
     <EmbeddedResource Include="Assets\Tag.svg" />
   </ItemGroup>
-  <PropertyGroup>
+  <!--<PropertyGroup>
     <RestoreSources>../FreeImage.NETCore/Package;$(RestoreSources);</RestoreSources>
-  </PropertyGroup>
+  </PropertyGroup>-->
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="BitMiracle.LibTiff.NET" Version="2.4.633" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     <PackageReference Include="SkiaSharp" Version="1.68.0" />
     <PackageReference Include="SkiaSharp.Svg" Version="1.60.0" />
     <PackageReference Include="SkiaSharp.HarfBuzz" Version="1.68.0" />
