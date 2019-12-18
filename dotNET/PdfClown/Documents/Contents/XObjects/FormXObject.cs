@@ -140,6 +140,14 @@ namespace PdfClown.Documents.Contents.XObjects
                 ;
         }
 
+        public PdfDictionary Group
+        {
+            get
+            {
+                return (PdfDictionary)BaseDataObject.Header.Resolve(PdfName.Group);
+            }
+        }
+
         public override SKSize Size
         {
             get
@@ -180,7 +188,7 @@ namespace PdfClown.Documents.Contents.XObjects
             //using (var canvas = new SKCanvas(bitmap))
             {
                 //Tools.Renderer.AssociateCanvasWithBitmap(canvas, bitmap);
-                canvas.Clear(SKColors.Transparent);
+                //canvas.Clear(SKColors.Transparent);
 
                 Render(canvas, box.Size);
                 return picture = recorder.EndRecording();

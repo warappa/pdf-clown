@@ -7,6 +7,7 @@ using PdfClown.Objects;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -42,7 +43,7 @@ namespace PdfClown.Documents.Contents
                 {
                     buffer = Bytes.Buffer.Extract(buffer, filter, imageObject.Parameters ?? imageObject.Header);
                     data = buffer.ToByteArray();
-                    image = SKBitmap.Decode(data);
+                    //image = SKBitmap.Decode(data);
                 }
 
             }
@@ -147,7 +148,7 @@ namespace PdfClown.Documents.Contents
             for (int i = 0; i < componentsCount; i++)
             {
                 var value = componentIndex < buffer.Length ? buffer[componentIndex] : 0;
-                if(value > 0)
+                if (value > 0)
                 {
 
                 }
@@ -169,6 +170,8 @@ namespace PdfClown.Documents.Contents
             var info = new SKImageInfo((int)size.Width, (int)size.Height)
             {
                 AlphaType = SKAlphaType.Premul,
+                ColorType = colorSpace == DeviceGrayColorSpace.Default ? SKColorType.Gray8 :
+                            SKColorType.Bgra8888,
                 ColorSpace = SKColorSpace.CreateSrgb()
             };
             if (iccColorSpace != null)
@@ -178,34 +181,43 @@ namespace PdfClown.Documents.Contents
 
             // create the buffer that will hold the pixels
             var raster = new uint[info.Width * info.Height];//var bitmap = new SKBitmap();
-
+            //var bitmap = new SKBitmap((int)size.Width, (int)size.Height, info.ColorType, info.AlphaType);
             for (int y = 0; y < info.Height; y++)
             {
                 for (int x = 0; x < info.Width; x++)
                 {
                     var index = (y * info.Width + x);
                     var color = GetColor(index);
+                    SKColor skColor;
                     
-                    var skColor = colorSpace.GetColor(color, null);
-
+                        skColor = colorSpace.GetColor(color, null);
                     if (sMaskLoader != null)
                     {
                         var sMaskColor = sMaskLoader.GetColor(index);
+                        
                         //alfa
-                        skColor = skColor.WithAlpha((byte)(((IPdfNumber)sMaskColor.Components[0]).DoubleValue * 255));
-                        //shaping
-                        for (int i = 0; i < color.Components.Count; i++)
+                        if (sMaskLoader.matte is null)
                         {
-                            var m = sMaskLoader.matte == null ? 0D : ((IPdfNumber)sMaskLoader.matte[i]).DoubleValue;
-                            var a = ((IPdfNumber)sMaskColor.Components[sMaskColor.Components.Count == color.Components.Count ? i : 0]).DoubleValue;
-                            var c = ((IPdfNumber)color.Components[i]).DoubleValue;
-                            color.Components[i] = new PdfReal(m + a * (c - m));
+                            var alpha = (byte)(((IPdfNumber)sMaskColor.Components[0]).DoubleValue * 255);
+                            skColor = skColor.WithAlpha(alpha);
                         }
+                        else
+                        {
+                            //shaping
+                            for (int i = 0; i < color.Components.Count; i++)
+                            {
+                                var m = sMaskLoader.matte == null ? 0D : ((IPdfNumber)sMaskLoader.matte[i]).DoubleValue;
+                                var a = ((IPdfNumber)sMaskColor.Components[sMaskColor.Components.Count == color.Components.Count ? i : 0]).DoubleValue;
+                                var c = ((IPdfNumber)color.Components[i]).DoubleValue;
+                                color.Components[i] = new PdfReal(m + a * (c - m));
+                            }
 
-                        skColor = colorSpace.GetColor(color, alpha);
+                            skColor = colorSpace.GetColor(color, null);
+                        }
                     }
 
-                    raster[index] = (uint)skColor;//bitmap.SetPixel(x, y, skColor);
+                    raster[index] = (uint)skColor;
+                    //bitmap.SetPixel(x, y, skColor);
                 }
             }
 
@@ -213,7 +225,7 @@ namespace PdfClown.Documents.Contents
             var ptr = GCHandle.Alloc(raster, GCHandleType.Pinned);
             var bitmap = new SKBitmap();
             bitmap.InstallPixels(info, ptr.AddrOfPinnedObject(), info.RowBytes, (addr, ctx) => ptr.Free(), null);
-
+            Tools.Renderer.DumpImage(bitmap, "imageloader.png");
             return bitmap;
         }
 
@@ -278,9 +290,9 @@ namespace PdfClown.Documents.Contents
                 };
 
                 // create the buffer that will hold the pixels
-                var raster = new int[width * height];
+                var raster = new uint[width * height];
                 // read the image into the memory buffer
-                if (!tifImg.ReadRGBAImageOriented(width, height, raster, Orientation.TOPLEFT))
+                if (!tifImg.ReadRGBAImageOriented(width, height, (int[])(object)raster, Orientation.TOPLEFT))
                 {
                     // not a valid TIF image.
                     return null;

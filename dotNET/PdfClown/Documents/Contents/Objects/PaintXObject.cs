@@ -135,7 +135,7 @@ namespace PdfClown.Documents.Contents.Objects
                         imageMatrix.ScaleY *= -1;
                         SKMatrix.PreConcat(ref imageMatrix, SKMatrix.MakeTranslation(0, -size.Height));
                         canvas.Concat(ref imageMatrix);
-                        ImagePaint.BlendMode = SKBlendMode.Overlay;
+                        ImagePaint.BlendMode = SKBlendMode.SrcOver;
 
                         if (state.BlendMode.Any())
                         {
@@ -154,7 +154,7 @@ namespace PdfClown.Documents.Contents.Objects
                                     ImagePaint.BlendMode = SKBlendMode.Overlay;
                                     break;
                                 case BlendModeEnum.Normal:
-                                    ImagePaint.BlendMode = SKBlendMode.Overlay;
+                                    ImagePaint.BlendMode = SKBlendMode.SrcOver;
                                     break;
                                 case BlendModeEnum.ColorBurn:
                                     ImagePaint.BlendMode = SKBlendMode.ColorBurn;
@@ -195,21 +195,26 @@ namespace PdfClown.Documents.Contents.Objects
                             }
                         }
 
-                        canvas.DrawBitmap(image, 0, 0, ImagePaint);
-                        //ApplyMask(canvas, image, 0, 0);
-                        //canvas.DrawCircle(0, 0, 100, new SKPaint
-                        //{
-                        //    Color = SKColors.Red,
-                        //});
+                        if (state.SMask is object)
+                        {
+                            using (var recorder = new SKPictureRecorder())
+                            using (var recorderCanvas = recorder.BeginRecording(new SKRect(0, 0, image.Width, image.Height)))
+                            {
+                                recorderCanvas.DrawBitmap(image, 0, 0, ImagePaint);
 
-                        DumpImage(image);
-                        //Tools.Renderer.DumpCanvas(canvas);
-                        //using (var surf = SKSurface.Create(canvas.GRContext, true, new SKImageInfo(image.Width, image.Height)))
-                        //{
-                        //    surf.Canvas.DrawBitmap(original, 0, 0);
-                        //    surf.Canvas.Flush();
-                        //    intermediates[i] = surf.Snapshot();
-                        //}
+                                using (var picture = recorder.EndRecording())
+                                {
+                                    DumpImage(picture, "picture.png");
+
+                                    ApplyMask(state, canvas, picture);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            DumpImage(image, "normal image.png");
+                            canvas.DrawBitmap(image, 0, 0, ImagePaint);
+                        }
                     }
                 }
                 else if (xObject is xObjects.FormXObject formObject)
@@ -219,86 +224,22 @@ namespace PdfClown.Documents.Contents.Objects
                     var formMatrix = formObject.Matrix;
                     canvas.Concat(ref formMatrix);
 
+                    var picture = formObject.Render();
+                    DumpImage(picture, "formobject.png");
 
                     if (state.SMask is object)
                     {
-                        var graphicsXObject = state.SMask[PdfName.G];
-
-                        var formObj = new FormXObject(graphicsXObject);
-
-                        var width = (int)Math.Floor(Math.Abs(formObj.Size.Width));
-                        var height = (int)Math.Floor(Math.Abs(formObj.Size.Height));
-                        var size = new SKSize(width, height);
-                        using (var alphaMask = new SKBitmap(width, height,
-                            SKColorType.Rgba8888, SKAlphaType.Premul))
-                        using (var canvasAlphaMask = new SKCanvas(alphaMask))
-                        {
-                            Tools.Renderer.AssociateCanvasWithBitmap(canvasAlphaMask, alphaMask);
-
-                            var newState = new GraphicsState(new ContentScanner(formObj, canvasAlphaMask, size));
-                            state.CopyTo(newState);
-                            canvasAlphaMask.Clear(SKColors.Transparent);
-                            newState.Scanner.Render(canvasAlphaMask, new SKSize(formObject.Box.Width, formObject.Box.Height));
-
-                            Tools.Renderer.DumpCanvas(canvasAlphaMask, "nach_render.png");
-
-                            using (var targetBitmap = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Premul))
-                            using (var targetCanvas = new SKCanvas(targetBitmap))
-                            {
-                                targetCanvas.Clear(SKColors.Transparent);
-                                var paint = new SKPaint
-                                {
-                                    ColorFilter = SKColorFilter.CreateColorMatrix(new float[]
-                                    {
-                                        0, 0, 0, 0, 0,
-                                        0, 0, 0, 0, 0,
-                                        0, 0, 0, 0, 0,
-                                        0.33f, 0.33f, 0.33f, 0, 0
-                                    }),
-                                };
-                                targetCanvas.DrawBitmap(alphaMask, 0, 0, paint);
-
-                                //DumpImage(targetBitmap, "alphaMask2.png");
-                                //ApplyMask(canvasAlphaMask2, alphaMask2, formObj.Box.Left, formObj.Box.Top);
-
-                                var picture = formObject.Render();
-                                //DumpImage(picture, "formobject.png");
-
-                                targetCanvas.DrawPicture(picture, new SKPaint
-                                {
-                                    BlendMode = SKBlendMode.SrcATop
-                                });
-
-                                canvas.DrawBitmap(targetBitmap, 0, 0);
-                            }
-                        }
+                        ApplyMask(state, canvas, picture);
                     }
                     else
                     {
-
-
-                        var picture = formObject.Render();
-                        DumpImage(picture, "formobject.png");
-
                         canvas.DrawPicture(picture, new SKPaint
                         {
-                            BlendMode = SKBlendMode.Overlay
+                            BlendMode = SKBlendMode.SrcOver
 
                         });
                         Tools.Renderer.DumpCanvas(canvas, "normal_formObject_merged.png");
                     }
-                    //DumpImage(picture);
-
-                    //canvas.DrawPicture(picture, new SKPaint
-                    //{
-                    //    BlendMode = SKBlendMode.Overlay
-
-                    //});
-                    //Tools.Renderer.DumpCanvas(canvas);
-
-
-
-
                 }
                 else
                 {
@@ -308,6 +249,113 @@ namespace PdfClown.Documents.Contents.Objects
             finally
             {
                 canvas.Restore();
+            }
+        }
+
+        private static void ApplyMask(GraphicsState state, SKCanvas canvas, SKPicture picture)
+        {
+            var sMaskGXObject = state.SMask[PdfName.G];
+            var subtype = (PdfName)state.SMask[PdfName.S];
+            var isLuminosity = subtype.StringValue == "Luminosity";
+
+            var alphaMaskFormObject = new FormXObject(sMaskGXObject);
+            var group = alphaMaskFormObject.Group;
+            var isolated = (group[PdfName.I] as PdfBoolean)?.BooleanValue ?? false;
+            var knockout = (group[PdfName.K] as PdfBoolean)?.BooleanValue ?? false;
+
+            var width = (int)Math.Floor(Math.Abs(alphaMaskFormObject.Size.Width));
+            var height = (int)Math.Floor(Math.Abs(alphaMaskFormObject.Size.Height));
+            var size = new SKSize(width, height);
+
+            using (var alphaMaskBitmap = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Premul))
+            using (var canvasAlphaMask = new SKCanvas(alphaMaskBitmap))
+            {
+                Tools.Renderer.AssociateCanvasWithBitmap(canvasAlphaMask, alphaMaskBitmap);
+
+                var stateAlphaMask = new GraphicsState(new ContentScanner(alphaMaskFormObject, canvasAlphaMask, size));
+                state.CopyTo(stateAlphaMask);
+
+                SKColor backgroundColorSK = SKColors.HotPink;
+
+                if (!isLuminosity)
+                {
+                    // alpha
+                    canvasAlphaMask.Clear(SKColors.Transparent);
+                }
+                else
+                {
+                    PdfArray backgroundColorArray;
+                    var rawBC = state.SMask[PdfName.BC];
+                    switch (rawBC)
+                    {
+                        case PdfReference bcRef:
+                            backgroundColorArray = (PdfArray)bcRef.Resolve();
+                            break;
+                        case PdfArray bcArray:
+                            backgroundColorArray = bcArray;
+                            break;
+                        default:
+                            throw new NotImplementedException($"{rawBC.GetType().Name}");
+                    }
+                    var backgroundColor = state.FillColorSpace.GetColor(backgroundColorArray, null);
+                    backgroundColorSK = state.FillColorSpace.GetColor(backgroundColor, 0);
+                    canvasAlphaMask.Clear(backgroundColorSK);
+                    //canvasAlphaMask.Clear(SKColors.Transparent);
+                }
+
+                stateAlphaMask.Scanner.ClearContext = false;
+                stateAlphaMask.Scanner.Render(canvasAlphaMask, new SKSize(picture.CullRect.Width, picture.CullRect.Height));
+
+                Tools.Renderer.DumpCanvas(canvasAlphaMask, "nach_render.png");
+
+                using (var transparencyGroupBitmap = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Premul))
+                using (var canvasTransparencyGroup = new SKCanvas(transparencyGroupBitmap))
+                {
+                    Tools.Renderer.AssociateCanvasWithBitmap(canvasTransparencyGroup, transparencyGroupBitmap);
+                    //canvasAlphaMask.Clear(SKColors.Transparent);
+
+                    canvasTransparencyGroup.Clear(SKColors.Transparent);
+                    var paint = new SKPaint();
+
+                    if (isLuminosity)
+                    {
+                        paint.ColorFilter = SKColorFilter.CreateColorMatrix(new float[]
+                        {
+                            0.33f, 0.33f, 0.33f, 0, 0,
+                            0.33f, 0.33f, 0.33f, 0, 0,
+                            0.33f, 0.33f, 0.33f, 0, 0,
+                            0.33f, 0.33f, 0.33f, 0, 0
+                        });
+                    }
+                    else // alpha
+                    {
+                        paint.ColorFilter = SKColorFilter.CreateColorMatrix(new float[]
+                        {
+                            0, 0, 0, 1, 0,
+                            0, 0, 0, 1, 0,
+                            0, 0, 0, 1, 0,
+                            0, 0, 0, 1, 0
+                        });
+                    }
+                    DumpImage(alphaMaskBitmap, "alphaMaskBitmap.png");
+
+                    canvasTransparencyGroup.DrawBitmap(alphaMaskBitmap, 0, 0, paint); // alias "Mask"
+                    Tools.Renderer.DumpCanvas(canvasTransparencyGroup, "mask drawn.png");
+                    
+                    DumpImage(picture, "picture.png");
+                    
+                    canvasTransparencyGroup.DrawPicture(picture, new SKPaint
+                    {
+                        BlendMode = SKBlendMode.SrcATop
+                    });
+                    Tools.Renderer.DumpCanvas(canvasTransparencyGroup, "picture on mask drawn.png");
+
+                    canvas.DrawBitmap(transparencyGroupBitmap, 0, 0, new SKPaint
+                    {
+                        BlendMode = knockout ? SKBlendMode.SrcOver : SKBlendMode.Overlay
+                    });
+                    Tools.Renderer.DumpCanvas(canvasTransparencyGroup, "all drawn on canvas.png");
+                }
             }
         }
 
