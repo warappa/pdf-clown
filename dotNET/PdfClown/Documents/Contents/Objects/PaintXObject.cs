@@ -99,6 +99,7 @@ namespace PdfClown.Documents.Contents.Objects
                 using (var b = new SKBitmap((int)Math.Ceiling(picture.CullRect.Width), (int)Math.Ceiling(picture.CullRect.Height)))
                 using (var canvas = new SKCanvas(b))
                 {
+                    canvas.Clear(SKColors.Transparent);
                     canvas.DrawPicture(picture);
 
                     SKPixmap.Encode(stream, b, SKEncodedImageFormat.Png, 100);
@@ -221,7 +222,10 @@ namespace PdfClown.Documents.Contents.Objects
 
                     if (state.SMask is object)
                     {
-                        var formObj = new FormXObject(state.SMask);
+                        var graphicsXObject = state.SMask[PdfName.G];
+
+                        var formObj = new FormXObject(graphicsXObject);
+
                         var width = (int)Math.Floor(Math.Abs(formObj.Size.Width));
                         var height = (int)Math.Floor(Math.Abs(formObj.Size.Height));
                         var size = new SKSize(width, height);
@@ -229,13 +233,12 @@ namespace PdfClown.Documents.Contents.Objects
                             SKColorType.Rgba8888, SKAlphaType.Premul))
                         using (var canvasAlphaMask = new SKCanvas(alphaMask))
                         {
-                            //canvasAlphaMask.Clear(SKColors.White);
                             Tools.Renderer.AssociateCanvasWithBitmap(canvasAlphaMask, alphaMask);
 
                             var newState = new GraphicsState(new ContentScanner(formObj, canvasAlphaMask, size));
                             state.CopyTo(newState);
-                            newState.Scanner.RenderContext.Clear(SKColors.Transparent);
-                            newState.Scanner.Render(newState.Scanner.RenderContext, new SKSize(formObject.Box.Width, formObject.Box.Height));
+                            canvasAlphaMask.Clear(SKColors.Transparent);
+                            newState.Scanner.Render(canvasAlphaMask, new SKSize(formObject.Box.Width, formObject.Box.Height));
 
                             Tools.Renderer.DumpCanvas(canvasAlphaMask, "nach_render.png");
 
@@ -255,13 +258,13 @@ namespace PdfClown.Documents.Contents.Objects
                                 };
                                 targetCanvas.DrawBitmap(alphaMask, 0, 0, paint);
 
-                                DumpImage(targetBitmap, "alphaMask2.png");
+                                //DumpImage(targetBitmap, "alphaMask2.png");
                                 //ApplyMask(canvasAlphaMask2, alphaMask2, formObj.Box.Left, formObj.Box.Top);
 
                                 var picture = formObject.Render();
-                                DumpImage(picture, "formobject.png");
+                                //DumpImage(picture, "formobject.png");
 
-                                targetCanvas.DrawBitmap(picture, 0, 0, new SKPaint
+                                targetCanvas.DrawPicture(picture, new SKPaint
                                 {
                                     BlendMode = SKBlendMode.SrcATop
                                 });
@@ -277,7 +280,7 @@ namespace PdfClown.Documents.Contents.Objects
                         var picture = formObject.Render();
                         DumpImage(picture, "formobject.png");
 
-                        canvas.DrawBitmap(picture, 0, 0, new SKPaint
+                        canvas.DrawPicture(picture, new SKPaint
                         {
                             BlendMode = SKBlendMode.Overlay
 

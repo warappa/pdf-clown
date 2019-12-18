@@ -124,7 +124,7 @@ namespace PdfClown.Documents.Contents.Objects
                     canvas.SetMatrix(matrix);
                     var rect = SKRect.Create(0, 0, size.Width, size.Height);
                     var test = canvas.TotalMatrix.MapRect(rect);
-                    canvas.DrawBitmap(image, 0, 0, new SKPaint { FilterQuality = SKFilterQuality.Medium });
+                    canvas.DrawBitmap(image, 0, 0, new SKPaint { FilterQuality = SKFilterQuality.High });
                 }
             }
         }

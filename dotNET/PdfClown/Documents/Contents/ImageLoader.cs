@@ -169,6 +169,7 @@ namespace PdfClown.Documents.Contents
             var info = new SKImageInfo((int)size.Width, (int)size.Height)
             {
                 AlphaType = SKAlphaType.Premul,
+                ColorSpace = SKColorSpace.CreateSrgb()
             };
             if (iccColorSpace != null)
             {
@@ -176,7 +177,7 @@ namespace PdfClown.Documents.Contents
             }
 
             // create the buffer that will hold the pixels
-            var raster = new int[info.Width * info.Height];//var bitmap = new SKBitmap();
+            var raster = new uint[info.Width * info.Height];//var bitmap = new SKBitmap();
 
             for (int y = 0; y < info.Height; y++)
             {
@@ -200,8 +201,11 @@ namespace PdfClown.Documents.Contents
                             var c = ((IPdfNumber)color.Components[i]).DoubleValue;
                             color.Components[i] = new PdfReal(m + a * (c - m));
                         }
+
+                        skColor = colorSpace.GetColor(color, alpha);
                     }
-                    raster[index] = (int)(uint)skColor;//bitmap.SetPixel(x, y, skColor);
+
+                    raster[index] = (uint)skColor;//bitmap.SetPixel(x, y, skColor);
                 }
             }
 
@@ -218,6 +222,7 @@ namespace PdfClown.Documents.Contents
             var info = new SKImageInfo((int)size.Width, (int)size.Height)
             {
                 AlphaType = SKAlphaType.Premul,
+                ColorSpace = SKColorSpace.CreateSrgb()
             };
             var skColor = state.FillColorSpace.GetColor(state.FillColor);
             var raster = new int[info.Width * info.Height];
@@ -268,7 +273,8 @@ namespace PdfClown.Documents.Contents
                 // create the bitmap
                 var info = new SKImageInfo(width, height)
                 {
-                    ColorType = SKColorType.Rgba8888
+                    ColorType = SKColorType.Rgba8888,
+                    ColorSpace = SKColorSpace.CreateSrgb()
                 };
 
                 // create the buffer that will hold the pixels

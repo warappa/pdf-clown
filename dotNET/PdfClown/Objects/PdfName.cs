@@ -494,6 +494,7 @@ namespace PdfClown.Objects
         public static readonly PdfName RT = new PdfName("RT");
         public static readonly PdfName RunLengthDecode = new PdfName("RunLengthDecode");
         public static readonly PdfName S = new PdfName("S");
+        public static readonly PdfName SA = new PdfName("SA");
         public static readonly PdfName Saturation = new PdfName("Saturation");
         public static readonly PdfName SBApproved = new PdfName("SBApproved");
         public static readonly PdfName SBCompleted = new PdfName("SBCompleted");

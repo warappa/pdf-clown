@@ -148,11 +148,14 @@ namespace PdfClown.Tools
         {
             //TODO:area!
             var image = new SKBitmap(
-              (int)size.Width,
-              (int)size.Height,
-              SKColorType.Rgba8888,
-              SKAlphaType.Premul
-              //PixelFormat.Format24bppRgb
+                new SKImageInfo
+                {
+                    ColorSpace = SKColorSpace.CreateSrgb(),
+                    AlphaType = SKAlphaType.Premul,
+                    ColorType = SKColorType.Rgba8888,
+                    Width = (int)size.Width,
+                    Height = (int)size.Height
+                }
               );
             using (var canvas = new SKCanvas(image))
             {

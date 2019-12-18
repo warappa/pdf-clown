@@ -169,23 +169,22 @@ namespace PdfClown.Documents.Contents.XObjects
 
         public ContentWrapper Contents => ContentWrapper.Wrap(BaseObject, this);
 
-        public SKBitmap Render()
+        public SKPicture Render()
         {
-            //if (picture != null)
-            //    return picture;
+            if (picture != null)
+                return picture;
             var box = Box;
-            //using (var recorder = new SKPictureRecorder())
-            //using (var canvas = recorder.BeginRecording(new SKRect(0, 0, box.Size.Width, box.Size.Height)))//
-            var bitmap = new SKBitmap((int)box.Size.Width, (int)box.Size.Height, SKColorType.Rgba8888, SKAlphaType.Opaque);
-
-            using(var canvas = new SKCanvas(bitmap))
+            using (var recorder = new SKPictureRecorder())
+            using (var canvas = recorder.BeginRecording(new SKRect(0, 0, box.Size.Width, box.Size.Height)))//
+            //var bitmap = new SKBitmap((int)box.Size.Width, (int)box.Size.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
+            //using (var canvas = new SKCanvas(bitmap))
             {
-                Tools.Renderer.AssociateCanvasWithBitmap(canvas, bitmap);
+                //Tools.Renderer.AssociateCanvasWithBitmap(canvas, bitmap);
                 canvas.Clear(SKColors.Transparent);
-                
+
                 Render(canvas, box.Size);
-                //return picture = recorder.EndRecording();
-                return bitmap;
+                return picture = recorder.EndRecording();
+                //return bitmap;
             }
         }
 

@@ -57,7 +57,10 @@ namespace PdfClown.Bytes.Filters
             using (DeflateStream inputFilter = new DeflateStream(inputStream, CompressionMode.Decompress))
             {
                 inputStream.Position = 2; // Skips zlib's 2-byte header [RFC 1950] [FIX:0.0.8:JCT].
-                Transform(inputFilter, outputStream);
+                //Transform(inputFilter, outputStream);
+                inputFilter.CopyTo(outputStream);
+                outputStream.Flush();
+                outputStream.Position = 0;
                 return DecodePredictor(outputStream.ToArray(), parameters);
             }
         }

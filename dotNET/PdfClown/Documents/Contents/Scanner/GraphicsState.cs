@@ -402,7 +402,8 @@ namespace PdfClown.Documents.Contents
         public bool? OverprintStroke { get; internal set; }
         public bool? OverprintPaint { get; internal set; }
         public int? OverprintMode { get; internal set; }
-        public PdfDirectObject SMask { get; internal set; }
+        public bool? AutomaticStrokeAdjustment { get; internal set; }
+        public PdfDictionary SMask { get; internal set; }
 
         #endregion
 

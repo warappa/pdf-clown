@@ -72,6 +72,13 @@ namespace PdfClown.Documents.Contents
         }
 
         [PDF(VersionEnum.PDF14)]
+        public bool? AutomaticStrokeAdjustment
+        {
+            get => (bool)PdfSimpleObject<object>.GetValue(BaseDataObject[PdfName.SA], null);
+            set => BaseDataObject[PdfName.SA] = PdfBoolean.Get(value);
+        }
+        
+        [PDF(VersionEnum.PDF14)]
         public bool? Overprint
         {
             get => (bool)PdfSimpleObject<object>.GetValue(BaseDataObject[PdfName.OP], null);
@@ -82,7 +89,7 @@ namespace PdfClown.Documents.Contents
         public int? OverprintMode
         {
             get => (int)PdfSimpleObject<object>.GetValue(BaseDataObject[PdfName.OPM], null);
-            set => BaseDataObject[PdfName.OP] = PdfBoolean.Get(value);
+            set => BaseDataObject[PdfName.OPM] = PdfBoolean.Get(value);
         }
 
         public void ApplyTo(GraphicsState state)
@@ -97,12 +104,12 @@ namespace PdfClown.Documents.Contents
                 else if (parameterName.Equals(PdfName.CA))
                 {
                     //if (!AlphaShape)
-                        state.StrokeAlpha = StrokeAlpha;
+                    state.StrokeAlpha = StrokeAlpha;
                 }
                 else if (parameterName.Equals(PdfName.ca))
                 {
                     //if (!AlphaShape)
-                        state.FillAlpha = FillAlpha;
+                    state.FillAlpha = FillAlpha;
                 }
                 else if (parameterName.Equals(PdfName.LC))
                 { state.LineCap = LineCap.Value; }
@@ -134,11 +141,15 @@ namespace PdfClown.Documents.Contents
                 else if (parameterName.Equals(PdfName.op))
                 {
                     state.OverprintPaint = false;
-                    
+
                 }
                 else if (parameterName.Equals(PdfName.OPM))
                 {
                     state.OverprintMode = OverprintMode;
+                }
+                else if (parameterName.Equals(PdfName.SA))
+                {
+                    state.AutomaticStrokeAdjustment = AutomaticStrokeAdjustment;
                 }
                 else
                 {
@@ -149,40 +160,32 @@ namespace PdfClown.Documents.Contents
         }
 
         [PDF(VersionEnum.PDF14)]
-        public PdfDirectObject SoftMask
+        public PdfDictionary SoftMask
         {
             get
             {
                 var sMask = BaseDataObject[PdfName.SMask];
-                if (sMask is PdfReference reference)
+                if (sMask is PdfDictionary dict)
                 {
-                    var a = reference.Resolve() as PdfDictionary;
-                    
-                    var o = a[PdfName.G];
-                    var p = o as PdfReference;
-                    return p;
-                    var u = p.Resolve() as PdfStream;
-                    
-                    var buffer = u.GetBody(true);
-                    var x = buffer.ToByteArray();
-                    var c = new ContentParser(x);
-                    var pdfObject = c.ParseContentObject();
-                    //return pdfObject;
+                    return dict;
                 }
-                else if (sMask is PdfName none)
+                else if (sMask is PdfReference reference)
                 {
-                    var o = File.Document.Resources.Get<PdfClown.Documents.Contents.XObjects.XObject>(none);
-                    //var p = o as PdfReference;
-                    return null;
+                    var a = (PdfDictionary)reference.Resolve();
+                    return a;
+                }
+                else if (sMask is PdfName name)
+                {
+                    var o = BaseDataObject[name];
+
+                    return (PdfDictionary)o;
                 }
                 else
                 {
                     throw new Exception("Not Supported SMask!" + sMask.GetType().Name);
                 }
-                return null;
-                //return number == null ? null : (double?)number.DoubleValue;
             }
-            set => BaseDataObject[PdfName.SMask] = null;// PdfReal.Get(value);
+            set => BaseDataObject[PdfName.SMask] = value;// PdfReal.Get(value);
         }
 
         /**
