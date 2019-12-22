@@ -36,9 +36,16 @@ using System.Reflection;
 using text = System.Text;
 using System.Text.RegularExpressions;
 using SkiaSharp;
+using SkiaSharp.HarfBuzz;
+using PdfClown.SkiaSharpUtils;
+using SharpFont;
 
 namespace PdfClown.Documents.Contents.Fonts
 {
+    public interface IShapeable
+    {
+        SKShaper2 Shaper { get; }
+    }
     /**
       <summary>Type 1 font [PDF:1.6:5.5.1;AFM:4.1].</summary>
     */
@@ -49,11 +56,14 @@ namespace PdfClown.Documents.Contents.Fonts
       * OpenFont/CFF (in case "CFF" table's Top DICT has no CIDFont operators).
     */
     [PDF(VersionEnum.PDF10)]
-    public class Type1Font : SimpleFont
+    public class Type1Font : SimpleFont, IShapeable
     {
         #region dynamic
         #region fields
         protected AfmParser.FontMetrics metrics;
+        private SharpFont.Face sfFace;
+        private HarfBuzzSharp.Face hbFace;
+        private HarfBuzzSharp.Font hbFont;
         #endregion
 
         #region constructors
@@ -68,65 +78,82 @@ namespace PdfClown.Documents.Contents.Fonts
         {
             base.OnLoad();
 
-            if (BaseDataObject.Resolve(PdfName.Encoding) is PdfDictionary encodingDictionary
-                && encodingDictionary.Values.Count > 0
-                && encodingDictionary.Resolve(PdfName.Differences) is PdfArray differencesObject)
-            {
-                var fontMapping = (GlyphMapping)null;
+            //if (BaseDataObject.Resolve(PdfName.Encoding) is PdfDictionary encodingDictionary
+            //    && encodingDictionary.Values.Count > 0
+            //    && encodingDictionary.Resolve(PdfName.Differences) is PdfArray differencesObject)
+            //{
+            //    var fontMapping = (GlyphMapping)null;
 
-                if (BaseDataObject.Resolve(PdfName.BaseFont) is PdfName pdfName)
-                {
-                    var name = Regex.Replace(pdfName.RawValue, @"[\/?:*""><|]+", "", RegexOptions.Compiled);
-                    if (GlyphMapping.IsExist(name))
-                    {
-                        fontMapping = new GlyphMapping(name);
-                    }
-                }
+            //    if (BaseDataObject.Resolve(PdfName.BaseFont) is PdfName pdfName)
+            //    {
+            //        var name = Regex.Replace(pdfName.RawValue, @"[\/?:*""><|]+", "", RegexOptions.Compiled);
+            //        if (GlyphMapping.IsExist(name))
+            //        {
+            //            fontMapping = new GlyphMapping(name);
+            //        }
+            //    }
 
-                byte[] charCodeData = new byte[1];
-                foreach (PdfDirectObject differenceObject in differencesObject)
-                {
-                    if (differenceObject is PdfInteger pdfInteger) // Subsequence initial code.
-                    { charCodeData[0] = (byte)(((int)pdfInteger.Value) & 0xFF); }
-                    else // Character name.
-                    {
-                        ByteArray charCode = new ByteArray(charCodeData);
-                        string charName = (string)((PdfName)differenceObject).Value;
-                        if (charName.Equals(".notdef", StringComparison.Ordinal))
-                        { codes.Remove(charCode); }
-                        else
-                        {
-                            int? code = GlyphMapping.DLFONT.NameToCode(charName) ?? fontMapping?.NameToCode(charName);
-                            if (code != null)
-                            {
-                                codes[charCode] = code.Value;
-                            }
-                            else
-                            {
-                                System.Diagnostics.Debug.WriteLine($" {charName}");
-                            }
-                        }
-                        charCodeData[0]++;
-                    }
-                }
-            }
+            //    byte[] charCodeData = new byte[1];
+            //    foreach (PdfDirectObject differenceObject in differencesObject)
+            //    {
+            //        if (differenceObject is PdfInteger pdfInteger) // Subsequence initial code.
+            //        { charCodeData[0] = (byte)(((int)pdfInteger.Value) & 0xFF); }
+            //        else // Character name.
+            //        {
+            //            ByteArray charCode = new ByteArray(charCodeData);
+            //            string charName = (string)((PdfName)differenceObject).Value;
+            //            if (charName.Equals(".notdef", StringComparison.Ordinal))
+            //            { codes.Remove(charCode); }
+            //            else
+            //            {
+            //                int? code = GlyphMapping.DLFONT.NameToCode(charName) ?? fontMapping?.NameToCode(charName);
+            //                if (code != null)
+            //                {
+            //                    codes[charCode] = code.Value;
+            //                }
+            //                else
+            //                {
+            //                    System.Diagnostics.Debug.WriteLine($" {charName}");
+            //                }
+            //            }
+            //            charCodeData[0]++;
+            //        }
+            //    }
+            //}
         }
-
+        public SKShaper2 Shaper { get; protected set; }
         protected override SKTypeface GetTypeface(PdfDictionary fontDescription, PdfStream stream)
         {
             var name = fontDescription.Resolve(PdfName.FontName)?.ToString();
             var buffer = stream.GetBody(true);
+            var bytes = buffer.ToByteArray();
 
+            sfFace = new SharpFont.Face(SharpFontExtensions.Library, bytes, 0);
+            sfFace.SetCharSize(50, 50, 72, 72);
+            //hbFace = sfFace.ToHarfBuzzFace();
+            //hbFont = new HarfBuzzSharp.Font(hbFace);
+            hbFont = sfFace.ToHarfBuzzFont2();
+            if(hbFont.TryGetGlyphFromString("w", out var glyph))
+            {
+
+            }
+            Shaper = new SKShaper2(hbFont, sfFace);
+            
+            return null;
             //var lenght1 = stream.Header[PdfName.Length1] as PdfInteger;
             //var lenght2 = stream.Header[PdfName.Length2] as PdfInteger;
             //var lenght3 = stream.Header[PdfName.Length3] as PdfInteger;
             //var bytes = buffer.GetByteArray(lenght1.IntValue, lenght2.IntValue + lenght3.IntValue);
             //System.IO.File.WriteAllBytes($"export{name}_part2.psc", bytes);
-            var bytes = buffer.ToByteArray();
+            //var bytes = buffer.ToByteArray();
             var typeface = (SKTypeface)null;
             using (var data = new SKMemoryStream(bytes))
             {
+                var a = new SKHarfBuzzFontFace();
+                    a.Load(bytes);
+                
                 typeface = SKFontManager.Default.CreateTypeface(data);
+                
             }
 #if DEBUG
             name = Regex.Replace(name, @"[\/?:*""><|]+", "", RegexOptions.Compiled);

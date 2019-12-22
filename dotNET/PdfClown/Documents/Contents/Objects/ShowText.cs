@@ -31,6 +31,8 @@ using System;
 using System.Collections.Generic;
 using SkiaSharp;
 using PdfClown.Documents.Contents.Scanner;
+using SkiaSharp.HarfBuzz;
+using PdfClown.SkiaSharpUtils;
 
 namespace PdfClown.Documents.Contents.Objects
 {
@@ -99,7 +101,7 @@ namespace PdfClown.Documents.Contents.Objects
             var fill = context != null && state.RenderModeFill ? state.FillColorSpace?.GetPaint(state.FillColor, state.FillAlpha) : null;
             var typeface = font?.GetTypeface();
             var nameTypeface = font?.GetTypefaceByName();
-
+            
             if (fill != null)
             {
                 fill.TextSize = (float)state.FontSize;
@@ -157,6 +159,8 @@ namespace PdfClown.Documents.Contents.Objects
                             || char.IsControl(textString[0])
                             )))
                         {
+                            IShapeable shapedFont = font as IShapeable;
+                            
                             var text = font is Type1Font
                                 ? System.Text.Encoding.UTF8.GetBytes(new[] { textChar })
                                 //: font is Type1Font && typeface != null
@@ -174,12 +178,12 @@ namespace PdfClown.Documents.Contents.Objects
                                 fill.Typeface = typeface;
                                 if (fill.ContainsGlyphs(text))
                                 {
-                                    context.DrawText(text, 0, 0, fill);
+                                    DrawText(context, fill, textChar, shapedFont, text, tm.ScaleX * ctm.ScaleX);
                                 }
                                 else if (typeface != nameTypeface)
                                 {
                                     fill.Typeface = nameTypeface;
-                                    context.DrawText(text, 0, 0, fill);
+                                    DrawText(context, fill, textChar, shapedFont, text, tm.ScaleX * ctm.ScaleX);
                                 }
                                 else
                                 { }
@@ -187,7 +191,7 @@ namespace PdfClown.Documents.Contents.Objects
 
                             if (stroke != null)
                             {
-                                context.DrawText(text, 0, 0, stroke);
+                                DrawText(context, stroke, textChar, shapedFont, text, tm.ScaleX * ctm.ScaleX);
                             }
                             context.Restore();
                         }
@@ -229,6 +233,18 @@ namespace PdfClown.Documents.Contents.Objects
 
                 if (this is ShowTextToNextLine)
                 { state.TextState.Tlm = tm; }
+            }
+        }
+
+        private static void DrawText(SKCanvas context, SKPaint fill, char textChar, IShapeable shapedFont, byte[] text, double fontSize)
+        {
+            if (shapedFont is object)
+            {
+                context.DrawShapedText2(shapedFont.Shaper, "" + textChar, 0, 0, fill, fontSize);
+            }
+            else
+            {
+                context.DrawText(text, 0, 0, fill);
             }
         }
 

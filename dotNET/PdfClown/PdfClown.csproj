@@ -14,6 +14,7 @@
     <Authors>Stefano Chizzolini</Authors>
     <Description>PDF engine</Description>
     <Copyright>Copyright 2006-2015 Stefano Chizzolini</Copyright>
+    <Platforms>AnyCPU;x86</Platforms>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugType>full</DebugType>
@@ -160,13 +161,18 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="BitMiracle.LibTiff.NET" Version="2.4.633" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="SkiaSharp" Version="1.68.1" />
+    <PackageReference Include="SharpFont.Dependencies" Version="2.6.0" />
+    <PackageReference Include="SkiaSharp" Version="1.68.1.1-preview.9" />
     <PackageReference Include="SkiaSharp.Svg" Version="1.60.0" />
-    <PackageReference Include="SkiaSharp.HarfBuzz" Version="1.68.1" />
+    <PackageReference Include="SkiaSharp.HarfBuzz" Version="1.68.1.1-preview.9" />
     <PackageReference Include="FreeImage.NETCore" Version="4.3.7" />
+    <PackageReference Include="SpaceWizards.SharpFont" Version="1.0.0" />
   </ItemGroup>
   <!--<ItemGroup>
     <ProjectReference Include="..\FreeImage.NETCore\FreeImage.NETCore.csproj" />

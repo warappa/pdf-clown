@@ -116,30 +116,30 @@ namespace PdfClown.Documents.Contents.Fonts
             }
             else
             {
-                //if (encodingObject is PdfDictionary encodingDictionary
-                //    && encodingDictionary.Values.Count > 0
-                //    && encodingDictionary.Resolve(PdfName.Differences) is PdfArray differencesObject)
-                //{
-                //    byte[] charCodeData = new byte[1];
-                //    foreach (PdfDirectObject differenceObject in differencesObject)
-                //    {
-                //        if (differenceObject is PdfInteger pdfInteger) // Subsequence initial code.
-                //        { charCodeData[0] = (byte)(((int)pdfInteger.Value) & 0xFF); }
-                //        else // Character name.
-                //        {
-                //            ByteArray charCode = new ByteArray(charCodeData);
-                //            string charName = (string)((PdfName)differenceObject).Value;
-                //            if (charName.Equals(".notdef", StringComparison.Ordinal))
-                //            { codes.Remove(charCode); }
-                //            else
-                //            {
-                //                int? code = GlyphMapping.NameToCode(charName);
-                //                codes[charCode] = (code ?? charCodeData[0]);
-                //            }
-                //            charCodeData[0]++;
-                //        }
-                //    }
-                //}
+                if (encodingObject is PdfDictionary encodingDictionary
+                    && encodingDictionary.Values.Count > 0
+                    && encodingDictionary.Resolve(PdfName.Differences) is PdfArray differencesObject)
+                {
+                    byte[] charCodeData = new byte[1];
+                    foreach (PdfDirectObject differenceObject in differencesObject)
+                    {
+                        if (differenceObject is PdfInteger pdfInteger) // Subsequence initial code.
+                        { charCodeData[0] = (byte)(((int)pdfInteger.Value) & 0xFF); }
+                        else // Character name.
+                        {
+                            ByteArray charCode = new ByteArray(charCodeData);
+                            string charName = (string)((PdfName)differenceObject).Value;
+                            if (charName.Equals(".notdef", StringComparison.Ordinal))
+                            { codes.Remove(charCode); }
+                            else
+                            {
+                                int? code = GlyphMapping.Default.NameToCode(charName);
+                                codes[charCode] = (code ?? charCodeData[0]);
+                            }
+                            charCodeData[0]++;
+                        }
+                    }
+                }
             }
             // Purging unused character codes...
             {
