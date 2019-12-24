@@ -103,7 +103,10 @@ namespace PdfClown.Documents.Contents.Fonts
                                 else
                                 {
                                     int? code = GlyphMapping.Default.NameToCode(charName);
-                                    codes[charCode] = (code ?? charCodeData[0]);
+                                    if (code.HasValue)
+                                    {
+                                        codes[charCode] = code.Value;
+                                    }
                                 }
                                 charCodeData[0]++;
                             }
@@ -134,7 +137,10 @@ namespace PdfClown.Documents.Contents.Fonts
                             else
                             {
                                 int? code = GlyphMapping.Default.NameToCode(charName);
-                                codes[charCode] = (code ?? charCodeData[0]);
+                                if (code.HasValue)
+                                {
+                                    codes[charCode] = code.Value;
+                                }
                             }
                             charCodeData[0]++;
                         }
