@@ -316,189 +316,60 @@ namespace PdfClown.SkiaSharpUtils
             // shape the text
             var result = shaper.Shape(text, x, y, paint, fontSize);
             canvas.Save();
-            canvas.Scale(1 / canvas.TotalMatrix.ScaleX, 1 / canvas.TotalMatrix.ScaleY);
+            //canvas.Scale(1 / canvas.TotalMatrix.ScaleX, 1 / canvas.TotalMatrix.ScaleY);
             // draw the text
             using (var paintClone = paint.Clone())
             {
                 paintClone.TextEncoding = SKTextEncoding.GlyphId;
                 paintClone.Typeface = shaper.Typeface;
                 paintClone.BlendMode = SKBlendMode.SrcATop;
-
+                Debug.WriteLine(text[0]);
                 var face = shaper.SfFace;
                 var codepoints = result.Codepoints;
-                //int penX = 0, penY = face.Size.Metrics.NominalHeight;
                 for (int i = 0; i < codepoints.Length; ++i)
                 {
-                    face.LoadGlyph(codepoints[i], LoadFlags.Default, LoadTarget.Normal);
+                    face.LoadGlyph(codepoints[i], LoadFlags.NoBitmap, LoadTarget.Normal);
                     face.Glyph.RenderGlyph(RenderMode.Normal);
-                    if (face.Glyph.Bitmap.Width == 0)
-                    {
-                        continue;
-                    }
 
-                    using (var cBmp = face.Glyph.Bitmap.ToSkBitmap(paintClone.Color))
-                    {
-                        var drawX = result.Points[i].X + face.Glyph.BitmapLeft; // penX + (result.Points[i].X >> 6) + face.Glyph.BitmapLeft;
-                        var drawY = result.Points[i].Y - +face.Glyph.BitmapTop;// penY - (glyphPositions[i].yOffset >> 6) - face.Glyph.BitmapTop;
-
-                        canvas.DrawBitmap(cBmp, drawX, drawY, paintClone);
-                        
-                        //penX += glyphPositions[i].xAdvance >> 6;
-                        //penY -= glyphPositions[i].yAdvance >> 6;
-                    }
+                    var skPath = GetPathForGlyph(face, (float)canvas.TotalMatrix.ScaleX);
+                    canvas.DrawPath(skPath, paintClone);
                 }
             }
             canvas.Restore();
         }
 
-        public static SKBitmap ToSkBitmap(this FTBitmap b, SKColor skColor)
+        private static SKPath GetPathForGlyph(SharpFont.Face face, float fontSize)
         {
-            if (b.IsDisposed)
-                throw new ObjectDisposedException("FTBitmap", "Cannot access a disposed object.");
+            var skPath = new SKPath();
+            var factor = 20; // Why exactly 20? I don't know
+            var outlineFuncs = new OutlineFuncs(
+                new MoveToFunc((ref FTVector to, IntPtr user) => {
+                    skPath.MoveTo(new SKPoint((float)to.X * factor, -(float)to.Y * factor));
+                    return 0; // 0 is success
+                }),
+                new LineToFunc((ref FTVector to, IntPtr user) => {
+                    skPath.LineTo(new SKPoint((float)to.X * factor, -(float)to.Y * factor));
+                    return 0;
+                }),
+                new ConicToFunc((ref FTVector control, ref FTVector to, IntPtr user) => {
 
-            if (b.Width == 0 || b.Rows == 0)
-                throw new InvalidOperationException("Invalid image size - one or both dimensions are 0.");
+                    skPath.ConicTo(new SKPoint((float)control.X * factor, -(float)control.Y * factor), new SKPoint((float)to.X * factor, -(float)to.Y * factor), 1f);
+                    return 0;
+                }),
+                new CubicToFunc((ref FTVector control1, ref FTVector control2, ref FTVector to, IntPtr user) => {
+                    skPath.CubicTo(
+                        new SKPoint((float)control1.X * factor, -(float)control1.Y * factor),
+                        new SKPoint((float)control2.X * factor, -(float)control2.Y * factor),
+                        new SKPoint((float)to.X * factor, -(float)to.Y * factor));
+                    return 0;
+                }),
+                0, 0
+            );
 
-            //TODO deal with negative pitch
-            switch (b.PixelMode)
-            {
-                case PixelMode.Mono:
-                    {
-                        var bmp = new SKBitmap(new SKImageInfo
-                        {
-                            Width = b.Width,
-                            Height = b.Rows,
-                            ColorType = SKColorType.Rgba8888,
-                            AlphaType = SKAlphaType.Premul
-                        });
+            face.Glyph.Outline.Decompose(outlineFuncs, IntPtr.Zero);
 
-                        var bytes = (int)Math.Ceiling((decimal)b.Rows * b.Width);
-                        var x = 0;
-                        var y = 0;
-                        for (int i = 0; i < bytes; i++)
-                        {
-                            var colorsOf8Pixels = b.BufferData[i];
-                            for (var k = 7; k >= 0; k--)
-                            {
-                                var color = (byte)(((colorsOf8Pixels >> k) & 1) == 1 ? 255 : 0);
-                                //bmp.SetPixel(x++, y, new SKColor(color, color, color, color));
-                                bmp.SetPixel(x++, y, skColor.WithAlpha(color));
-                                if (x == b.Width)
-                                {
-                                    x = 0;
-                                    y++;
-                                }
-                            }
-                        }
-
-                        return bmp;
-                    }
-
-                case PixelMode.Gray4:
-                    {
-                        var bmp = new SKBitmap(new SKImageInfo
-                        {
-                            Width = b.Width,
-                            Height = b.Rows,
-                            ColorType = SKColorType.Rgba8888,
-                            AlphaType = SKAlphaType.Premul
-                        });
-
-                        var bytes = (int)Math.Ceiling((decimal)b.Rows * b.Width);
-                        var x = 0;
-                        var y = 0;
-                        for (int i = 0; i < bytes; i++)
-                        {
-                            var colorsOf2Pixels = b.BufferData[i];
-                            for (var k = 1; k >= 0; k--)
-                            {
-                                var color = (byte)(((colorsOf2Pixels >> (k * 4)) & 127) * 17);
-                                bmp.SetPixel(x++, y, skColor.WithAlpha(color));
-                                if (x == b.Width)
-                                {
-                                    x = 0;
-                                    y++;
-                                }
-                            }
-                        }
-
-                        return bmp;
-                    }
-
-                case PixelMode.Gray:
-                    {
-                        var bmp = new SKBitmap(new SKImageInfo
-                        {
-                            Width = b.Width,
-                            Height = b.Rows,
-                            ColorType = SKColorType.Rgba8888,
-                            AlphaType = SKAlphaType.Premul
-                        });
-
-                        for (int i = 0; i < b.Rows; i++)
-                        {
-                            for (var j = 0; j < b.Width; j++)
-                            {
-                                var color = b.BufferData[i * b.Width + j];
-                                bmp.SetPixel(j, i, skColor.WithAlpha(color));
-                            }
-                        }
-
-                        return bmp;
-                    }
-
-                case PixelMode.Lcd:
-                    {
-                        var bmp = new SKBitmap(new SKImageInfo
-                        {
-                            Width = b.Width / 3,
-                            Height = b.Rows,
-                            ColorType = SKColorType.Rgba8888,
-                            AlphaType = SKAlphaType.Premul
-                        });
-
-                        for (int i = 0; i < b.Rows; i++)
-                        {
-                            for (var j = 0; j < b.Width; j++)
-                            {
-                                var red = b.BufferData[i * b.Width + j];
-                                var green = b.BufferData[i * b.Width + j + 1];
-                                var blue = b.BufferData[i * b.Width + j + 2];
-                                bmp.SetPixel(j, i, skColor.WithAlpha(red));
-                            }
-                        }
-
-                        return bmp;
-                    }
-                /*case PixelMode.VerticalLcd:
-				{
-					int bmpHeight = b.Rows / 3;
-					Bitmap bmp = new Bitmap(b.Width, bmpHeight, PixelFormat.Format24bppRgb);
-					var locked = bmp.LockBits(new Rectangle(0, 0, b.Width, bmpHeight), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
-					for (int i = 0; i < bmpHeight; i++)
-						PInvokeHelper.Copy(Buffer, i * b.Pitch, locked.Scan0, i * locked.Stride, b.Width);
-					bmp.UnlockBits(locked);
-
-					return bmp;
-				}*/
-
-                default:
-                    throw new InvalidOperationException("System.Drawing.Bitmap does not support this pixel mode.");
-            }
+            var svg = skPath.ToSvgPathData();
+            return skPath;
         }
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct PostscriptRec
-    {
-        internal IntPtr FormatType;
-        internal IntPtr italicAngle;
-        internal short underlinePosition;
-        internal short underlineThickness;
-        internal UIntPtr isFixedPitch;
-        internal UIntPtr minMemType42;
-        internal UIntPtr maxMemType42;
-        internal UIntPtr minMemType1;
-        internal UIntPtr maxMemType1;
     }
 }

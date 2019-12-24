@@ -54,7 +54,7 @@ namespace PdfClown.SkiaSharpUtils
             //buffer.Script = Script.MaxValue;
             buffer.GuessSegmentProperties();
             // do the shaping
-            SfFace.SetCharSize(0, fontSize, 72, 72);
+            //SfFace.SetCharSize(0, fontSize, 72, 72);
             Font.ShapeBetter(buffer);
 
             // get the shaping results
