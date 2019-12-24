@@ -23,29 +23,13 @@
   this list of conditions.
 */
 
-using PdfClown.Bytes;
-using PdfClown.Documents;
 using PdfClown.Objects;
-using PdfClown.Util;
-
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Reflection;
-using text = System.Text;
 using System.Text.RegularExpressions;
 using SkiaSharp;
-using SkiaSharp.HarfBuzz;
-using PdfClown.SkiaSharpUtils;
 using SharpFont;
 
 namespace PdfClown.Documents.Contents.Fonts
 {
-    public interface IFontWithFreeTypeFace
-    {
-        SharpFont.Face Face { get; }
-    }
     /**
       <summary>Type 1 font [PDF:1.6:5.5.1;AFM:4.1].</summary>
     */
@@ -58,13 +42,18 @@ namespace PdfClown.Documents.Contents.Fonts
     [PDF(VersionEnum.PDF10)]
     public class Type1Font : SimpleFont, IFontWithFreeTypeFace
     {
+        public static Library Library;
+
+        static Type1Font()
+        {
+            Library = new SharpFont.Library();
+        }
+
         #region dynamic
         #region fields
         protected AfmParser.FontMetrics metrics;
-        private SharpFont.Face sfFace;
-        private HarfBuzzSharp.Face hbFace;
-        private HarfBuzzSharp.Font hbFont;
         #endregion
+        public SharpFont.Face Face { get; protected set; }
 
         #region constructors
         internal Type1Font(Document context) : base(context)
@@ -121,16 +110,14 @@ namespace PdfClown.Documents.Contents.Fonts
             //    }
             //}
         }
-        public SharpFont.Face Face { get; protected set; }
+
         protected override SKTypeface GetTypeface(PdfDictionary fontDescription, PdfStream stream)
         {
             var name = fontDescription.Resolve(PdfName.FontName)?.ToString();
             var buffer = stream.GetBody(true);
             var bytes = buffer.ToByteArray();
 
-            Face = new SharpFont.Face(SharpFontExtensions.Library, bytes, 0);
-            Face.SetCharSize(Face.UnitsPerEM, Face.UnitsPerEM, 72, 72);
-            return null;
+           
             //var lenght1 = stream.Header[PdfName.Length1] as PdfInteger;
             //var lenght2 = stream.Header[PdfName.Length2] as PdfInteger;
             //var lenght3 = stream.Header[PdfName.Length3] as PdfInteger;
@@ -140,15 +127,11 @@ namespace PdfClown.Documents.Contents.Fonts
             var typeface = (SKTypeface)null;
             using (var data = new SKMemoryStream(bytes))
             {
-                var a = new SKHarfBuzzFontFace();
-                    a.Load(bytes);
-                
                 typeface = SKFontManager.Default.CreateTypeface(data);
-                
             }
 #if DEBUG
-            name = Regex.Replace(name, @"[\/?:*""><|]+", "", RegexOptions.Compiled);
-            System.IO.File.WriteAllBytes($"export_{name}.psc", bytes);
+            //name = Regex.Replace(name, @"[\/?:*""><|]+", "", RegexOptions.Compiled);
+            //System.IO.File.WriteAllBytes($"export_{name}.psc", bytes);
             //if (typeface == null)
             //{
             //    using (var manifestStream = typeof(Type1Font).Assembly.GetManifestResourceStream(name + ".otf"))
@@ -165,9 +148,21 @@ namespace PdfClown.Documents.Contents.Fonts
             {
                 typeface = ParseName(name, fontDescription);
             }
-            return typeface;
+
+            if (typeface != null) {
+                return typeface;
+            }
+
+            Face = new SharpFont.Face(Library, bytes, 0);
+            Face.SetCharSize(Face.UnitsPerEM, Face.UnitsPerEM, 72, 72);
+
+            return null;
         }
 
         #endregion
+    }
+    public interface IFontWithFreeTypeFace
+    {
+        SharpFont.Face Face { get; }
     }
 }

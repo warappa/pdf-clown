@@ -170,7 +170,6 @@
     <PackageReference Include="SharpFont.Dependencies" Version="2.6.0" />
     <PackageReference Include="SkiaSharp" Version="1.68.1.1-preview.9" />
     <PackageReference Include="SkiaSharp.Svg" Version="1.60.0" />
-    <PackageReference Include="SkiaSharp.HarfBuzz" Version="1.68.1.1-preview.9" />
     <PackageReference Include="FreeImage.NETCore" Version="4.3.7" />
     <PackageReference Include="SpaceWizards.SharpFont" Version="1.0.0" />
   </ItemGroup>

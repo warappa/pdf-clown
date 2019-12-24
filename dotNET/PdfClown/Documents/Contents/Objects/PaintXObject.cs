@@ -124,7 +124,6 @@ namespace PdfClown.Documents.Contents.Objects
                 canvas.Save();
                 var xObject = GetXObject(scanner.ContentContext);
 
-                Debug.WriteLine($"\nPaint {xObject.GetType()}");
                 if (xObject is xObjects.ImageXObject imageObject)
                 {
                     var image = imageObject.LoadImage(state);

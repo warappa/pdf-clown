@@ -31,7 +31,6 @@ using System;
 using System.Collections.Generic;
 using SkiaSharp;
 using PdfClown.Documents.Contents.Scanner;
-using SkiaSharp.HarfBuzz;
 using PdfClown.SkiaSharpUtils;
 
 namespace PdfClown.Documents.Contents.Objects
@@ -159,8 +158,6 @@ namespace PdfClown.Documents.Contents.Objects
                             || char.IsControl(textString[0])
                             )))
                         {
-                            IFontWithFreeTypeFace shapedFont = font as IFontWithFreeTypeFace;
-                            
                             var text = font is Type1Font
                                 ? System.Text.Encoding.UTF8.GetBytes(new[] { textChar })
                                 //: font is Type1Font && typeface != null
@@ -178,12 +175,12 @@ namespace PdfClown.Documents.Contents.Objects
                                 fill.Typeface = typeface;
                                 if (fill.ContainsGlyphs(text))
                                 {
-                                    DrawText(context, fill, textChar, shapedFont, text);
+                                    DrawText(context, fill, textChar, font, text);
                                 }
                                 else if (typeface != nameTypeface)
                                 {
                                     fill.Typeface = nameTypeface;
-                                    DrawText(context, fill, textChar, shapedFont, text);
+                                    DrawText(context, fill, textChar, font, text);
                                 }
                                 else
                                 { }
@@ -191,7 +188,7 @@ namespace PdfClown.Documents.Contents.Objects
 
                             if (stroke != null)
                             {
-                                DrawText(context, stroke, textChar, shapedFont, text);
+                                DrawText(context, stroke, textChar, font, text);
                             }
                             context.Restore();
                         }
@@ -236,9 +233,10 @@ namespace PdfClown.Documents.Contents.Objects
             }
         }
 
-        private static void DrawText(SKCanvas context, SKPaint fill, char textChar, IFontWithFreeTypeFace fontWithFreeTypeFace, byte[] text)
+        private static void DrawText(SKCanvas context, SKPaint fill, char textChar, Font font, byte[] text)
         {
-            if (fontWithFreeTypeFace is object)
+            if (font is IFontWithFreeTypeFace fontWithFreeTypeFace &&
+                fontWithFreeTypeFace.Face is object)
             {
                 context.DrawTextWithFreeTypeFace(fontWithFreeTypeFace.Face, "" + textChar, 0, 0, fill);
             }

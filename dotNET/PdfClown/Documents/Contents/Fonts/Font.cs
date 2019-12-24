@@ -37,8 +37,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using SkiaSharp;
-using SkiaSharp.HarfBuzz;
-using HarfBuzzSharp;
 
 namespace PdfClown.Documents.Contents.Fonts
 {
@@ -366,13 +364,21 @@ namespace PdfClown.Documents.Contents.Fonts
                 : parameters[0].Equals("ZapfDingbats", StringComparison.OrdinalIgnoreCase)
                 ? "Wingdings"
                 : parameters[0];
-            
+
             //SKFontManager.Default.FontFamilies
             if (fontName.IndexOf("Arial", StringComparison.Ordinal) > -1)
             {
                 fontName = "Arial";
             }
-            return cache[name] = SKTypeface.FromFamilyName(fontName, style);
+            typeface = SKTypeface.FromFamilyName(fontName, style);
+
+            if (typeface.FamilyName == fontName)
+            {
+                cache[name] = typeface;
+                return typeface;
+            }
+            typeface?.Dispose();
+            return null;
         }
 
         protected virtual SKFontStyle GetStyle(string name, PdfDictionary fontDescription)
