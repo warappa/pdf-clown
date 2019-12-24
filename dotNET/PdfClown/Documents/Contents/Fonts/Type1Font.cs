@@ -42,9 +42,9 @@ using SharpFont;
 
 namespace PdfClown.Documents.Contents.Fonts
 {
-    public interface IShapeable
+    public interface IFontWithFreeTypeFace
     {
-        SKShaper2 Shaper { get; }
+        SharpFont.Face Face { get; }
     }
     /**
       <summary>Type 1 font [PDF:1.6:5.5.1;AFM:4.1].</summary>
@@ -56,7 +56,7 @@ namespace PdfClown.Documents.Contents.Fonts
       * OpenFont/CFF (in case "CFF" table's Top DICT has no CIDFont operators).
     */
     [PDF(VersionEnum.PDF10)]
-    public class Type1Font : SimpleFont, IShapeable
+    public class Type1Font : SimpleFont, IFontWithFreeTypeFace
     {
         #region dynamic
         #region fields
@@ -121,24 +121,15 @@ namespace PdfClown.Documents.Contents.Fonts
             //    }
             //}
         }
-        public SKShaper2 Shaper { get; protected set; }
+        public SharpFont.Face Face { get; protected set; }
         protected override SKTypeface GetTypeface(PdfDictionary fontDescription, PdfStream stream)
         {
             var name = fontDescription.Resolve(PdfName.FontName)?.ToString();
             var buffer = stream.GetBody(true);
             var bytes = buffer.ToByteArray();
 
-            sfFace = new SharpFont.Face(SharpFontExtensions.Library, bytes, 0);
-            sfFace.SetCharSize(50, 50, 72, 72);
-            //hbFace = sfFace.ToHarfBuzzFace();
-            //hbFont = new HarfBuzzSharp.Font(hbFace);
-            hbFont = sfFace.ToHarfBuzzFont2();
-            if(hbFont.TryGetGlyphFromString("w", out var glyph))
-            {
-
-            }
-            Shaper = new SKShaper2(hbFont, sfFace);
-            
+            Face = new SharpFont.Face(SharpFontExtensions.Library, bytes, 0);
+            Face.SetCharSize(Face.UnitsPerEM, Face.UnitsPerEM, 72, 72);
             return null;
             //var lenght1 = stream.Header[PdfName.Length1] as PdfInteger;
             //var lenght2 = stream.Header[PdfName.Length2] as PdfInteger;

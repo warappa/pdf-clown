@@ -159,7 +159,7 @@ namespace PdfClown.Documents.Contents.Objects
                             || char.IsControl(textString[0])
                             )))
                         {
-                            IShapeable shapedFont = font as IShapeable;
+                            IFontWithFreeTypeFace shapedFont = font as IFontWithFreeTypeFace;
                             
                             var text = font is Type1Font
                                 ? System.Text.Encoding.UTF8.GetBytes(new[] { textChar })
@@ -178,12 +178,12 @@ namespace PdfClown.Documents.Contents.Objects
                                 fill.Typeface = typeface;
                                 if (fill.ContainsGlyphs(text))
                                 {
-                                    DrawText(context, fill, textChar, shapedFont, text, tm.ScaleX * ctm.ScaleX);
+                                    DrawText(context, fill, textChar, shapedFont, text);
                                 }
                                 else if (typeface != nameTypeface)
                                 {
                                     fill.Typeface = nameTypeface;
-                                    DrawText(context, fill, textChar, shapedFont, text, tm.ScaleX * ctm.ScaleX);
+                                    DrawText(context, fill, textChar, shapedFont, text);
                                 }
                                 else
                                 { }
@@ -191,7 +191,7 @@ namespace PdfClown.Documents.Contents.Objects
 
                             if (stroke != null)
                             {
-                                DrawText(context, stroke, textChar, shapedFont, text, tm.ScaleX * ctm.ScaleX);
+                                DrawText(context, stroke, textChar, shapedFont, text);
                             }
                             context.Restore();
                         }
@@ -236,11 +236,11 @@ namespace PdfClown.Documents.Contents.Objects
             }
         }
 
-        private static void DrawText(SKCanvas context, SKPaint fill, char textChar, IShapeable shapedFont, byte[] text, double fontSize)
+        private static void DrawText(SKCanvas context, SKPaint fill, char textChar, IFontWithFreeTypeFace fontWithFreeTypeFace, byte[] text)
         {
-            if (shapedFont is object)
+            if (fontWithFreeTypeFace is object)
             {
-                context.DrawShapedText2(shapedFont.Shaper, "" + textChar, 0, 0, fill, fontSize);
+                context.DrawTextWithFreeTypeFace(fontWithFreeTypeFace.Face, "" + textChar, 0, 0, fill);
             }
             else
             {

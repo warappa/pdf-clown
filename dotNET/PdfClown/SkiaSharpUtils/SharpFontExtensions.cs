@@ -299,12 +299,10 @@ namespace PdfClown.SkiaSharpUtils
 
     public static class CanvasExtensions
     {
-        public static void DrawShapedText2(this SKCanvas canvas, SKShaper2 shaper, string text, float x, float y, SKPaint paint, double fontSize)
+        public static void DrawTextWithFreeTypeFace(this SKCanvas canvas, SharpFont.Face face, string text, float x, float y, SKPaint paint)
         {
             if (canvas == null)
                 throw new ArgumentNullException(nameof(canvas));
-            if (shaper == null)
-                throw new ArgumentNullException(nameof(shaper));
             if (text == null)
                 throw new ArgumentNullException(nameof(text));
             if (paint == null)
@@ -314,34 +312,30 @@ namespace PdfClown.SkiaSharpUtils
                 return;
 
             // shape the text
-            var result = shaper.Shape(text, x, y, paint, fontSize);
-            canvas.Save();
-            //canvas.Scale(1 / canvas.TotalMatrix.ScaleX, 1 / canvas.TotalMatrix.ScaleY);
             // draw the text
             using (var paintClone = paint.Clone())
             {
                 paintClone.TextEncoding = SKTextEncoding.GlyphId;
-                paintClone.Typeface = shaper.Typeface;
                 paintClone.BlendMode = SKBlendMode.SrcATop;
                 Debug.WriteLine(text[0]);
-                var face = shaper.SfFace;
-                var codepoints = result.Codepoints;
+                var codepoints = text
+                    .Select(c => face.GetCharIndex(c))
+                    .ToArray();
                 for (int i = 0; i < codepoints.Length; ++i)
                 {
                     face.LoadGlyph(codepoints[i], LoadFlags.NoBitmap, LoadTarget.Normal);
                     face.Glyph.RenderGlyph(RenderMode.Normal);
 
-                    var skPath = GetPathForGlyph(face, (float)canvas.TotalMatrix.ScaleX);
+                    var skPath = GetPathForGlyph(face);
                     canvas.DrawPath(skPath, paintClone);
                 }
             }
-            canvas.Restore();
         }
 
-        private static SKPath GetPathForGlyph(SharpFont.Face face, float fontSize)
+        private static SKPath GetPathForGlyph(SharpFont.Face face)
         {
             var skPath = new SKPath();
-            var factor = 20; // Why exactly 20? I don't know
+            var factor = 1;
             var outlineFuncs = new OutlineFuncs(
                 new MoveToFunc((ref FTVector to, IntPtr user) => {
                     skPath.MoveTo(new SKPoint((float)to.X * factor, -(float)to.Y * factor));
