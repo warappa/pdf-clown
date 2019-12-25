@@ -32,14 +32,32 @@ namespace PdfClown.Util.Collections.Generic
     {
         public static void AddAll<T>(this ICollection<T> collection, IEnumerable<T> enumerable)
         {
-            foreach (T item in enumerable)
-            { collection.Add(item); }
+            if (collection is List<T> list)
+            {
+                list.AddRange(enumerable);
+            }
+            else
+            {
+                foreach (T item in enumerable)
+                {
+                    collection.Add(item);
+                }
+            }
         }
 
         public static void RemoveAll<T>(this ICollection<T> collection, IEnumerable<T> enumerable)
         {
-            foreach (T item in enumerable)
-            { collection.Remove(item); }
+            if (collection is List<T> list)
+            {
+                list.RemoveAll(enumerable);
+            }
+            else
+            {
+                foreach (T item in enumerable)
+                {
+                    collection.Remove(item);
+                }
+            }
         }
 
         /**

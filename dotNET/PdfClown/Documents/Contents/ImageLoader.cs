@@ -6,9 +6,11 @@ using PdfClown.Documents.Contents.Scanner;
 using PdfClown.Objects;
 using SkiaSharp;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -79,6 +81,7 @@ namespace PdfClown.Documents.Contents
         private double min;
         private double max;
         private byte[] buffer;
+        private int bufferLength;
         private bool imageMask;
         private PdfArray decode;
         private IImageObject sMask;
@@ -107,6 +110,7 @@ namespace PdfClown.Documents.Contents
             this.state = state;
             this.image = image;
             this.buffer = buffer;
+            bufferLength = buffer.Length;
             imageMask = image.ImageMask;
             decode = image.Decode;
             matte = image.Matte;
@@ -135,29 +139,21 @@ namespace PdfClown.Documents.Contents
                 iccColorSpace = indexedColorSpace.BaseSpace as ICCBasedColorSpace;
             }
         }
-
-        public Color GetColor(int x, int y)
-        {
-            return GetColor((y * (int)size.Width + x));
-        }
-
+        
         public Color GetColor(int index)
         {
             var componentIndex = index * componentsCount;
-            var components = new List<PdfDirectObject>();
+            var components = new PdfDirectObject[componentsCount];
             for (int i = 0; i < componentsCount; i++)
             {
-                var value = componentIndex < buffer.Length ? buffer[componentIndex] : 0;
-                if (value > 0)
-                {
+                var value = componentIndex < bufferLength ? buffer[componentIndex++] : 0;
 
-                }
-                var interpolate = min + (value * ((max - min) / maximum));//indexed ? value : 
-                components.Add(indexed
+                var interpolate = min + (value * ((max - min) / maximum));
+                components[i] = indexed
                     ? (PdfDirectObject)new PdfInteger((int)interpolate)
-                    : (PdfDirectObject)new PdfReal(interpolate));
-                componentIndex++;
+                    : (PdfDirectObject)new PdfReal(interpolate);
             }
+
             return colorSpace.GetColor(components, null);
         }
 
@@ -179,46 +175,47 @@ namespace PdfClown.Documents.Contents
                 info.ColorSpace = iccColorSpace.GetSKColorSpace();
             }
 
+            var width = info.Width;
+            var height = info.Height;
             // create the buffer that will hold the pixels
-            var raster = new uint[info.Width * info.Height];//var bitmap = new SKBitmap();
-            //var bitmap = new SKBitmap((int)size.Width, (int)size.Height, info.ColorType, info.AlphaType);
-            for (int y = 0; y < info.Height; y++)
+
+            var colorComponentCount = componentsCount;
+            var maskComponentCount = sMaskLoader?.GetColor(0).Components.Count ?? 0;
+
+            var length = width * height;
+            var raster = new uint[length];
+            for (int index = 0; index < length; index++)
             {
-                for (int x = 0; x < info.Width; x++)
+                var color = GetColor(index);
+
+                var skColor = colorSpace.GetColor(color, null);
+
+                if (sMaskLoader != null)
                 {
-                    var index = (y * info.Width + x);
-                    var color = GetColor(index);
-                    SKColor skColor;
-                    
-                        skColor = colorSpace.GetColor(color, null);
-                    if (sMaskLoader != null)
+                    var sMaskColor = sMaskLoader.GetColor(index);
+
+                    //alpha
+                    if (sMaskLoader.matte is null)
                     {
-                        var sMaskColor = sMaskLoader.GetColor(index);
-                        
-                        //alfa
-                        if (sMaskLoader.matte is null)
-                        {
-                            var alpha = (byte)(((IPdfNumber)sMaskColor.Components[0]).DoubleValue * 255);
-                            skColor = skColor.WithAlpha(alpha);
-                        }
-                        else
-                        {
-                            //shaping
-                            for (int i = 0; i < color.Components.Count; i++)
-                            {
-                                var m = sMaskLoader.matte == null ? 0D : ((IPdfNumber)sMaskLoader.matte[i]).DoubleValue;
-                                var a = ((IPdfNumber)sMaskColor.Components[sMaskColor.Components.Count == color.Components.Count ? i : 0]).DoubleValue;
-                                var c = ((IPdfNumber)color.Components[i]).DoubleValue;
-                                color.Components[i] = new PdfReal(m + a * (c - m));
-                            }
-
-                            skColor = colorSpace.GetColor(color, null);
-                        }
+                        var alpha = (byte)(((IPdfNumber)sMaskColor.Components[0]).DoubleValue * 255);
+                        skColor = skColor.WithAlpha(alpha);
                     }
+                    else
+                    {
+                        //shaping
+                        for (int i = 0; i < colorComponentCount; i++)
+                        {
+                            var m = sMaskLoader.matte == null ? 0D : ((IPdfNumber)sMaskLoader.matte[i]).DoubleValue;
+                            var a = ((IPdfNumber)sMaskColor.Components[maskComponentCount == colorComponentCount ? i : 0]).DoubleValue;
+                            var c = ((IPdfNumber)color.Components[i]).DoubleValue;
+                            color.Components[i] = new PdfReal(m + a * (c - m));
+                        }
 
-                    raster[index] = (uint)skColor;
-                    //bitmap.SetPixel(x, y, skColor);
+                        skColor = colorSpace.GetColor(color, null);
+                    }
                 }
+
+                raster[index] = (uint)skColor;
             }
 
             // get a pointer to the buffer, and give it to the bitmap
@@ -244,7 +241,7 @@ namespace PdfClown.Documents.Contents
                 for (int x = 0; x < info.Width; x++)
                 {
                     var index = (y * info.Width + x);
-                    var value = index < buffer.Length ? buffer[index] : (byte)0;
+                    var value = index < bufferLength ? buffer[index] : (byte)0;
                     raster[index] = (int)(uint)skColor.WithAlpha(value);
                 }
             }

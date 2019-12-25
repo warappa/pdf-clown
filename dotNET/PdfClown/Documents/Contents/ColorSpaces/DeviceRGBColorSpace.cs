@@ -29,6 +29,7 @@ using PdfClown.Objects;
 using System;
 using System.Collections.Generic;
 using SkiaSharp;
+using System.Runtime.CompilerServices;
 
 namespace PdfClown.Documents.Contents.ColorSpaces
 {
@@ -66,21 +67,19 @@ namespace PdfClown.Documents.Contents.ColorSpaces
         public override int ComponentCount => 3;
 
         public override Color DefaultColor => DeviceRGBColor.Default;
-
+        
         public override Color GetColor(IList<PdfDirectObject> components, IContentContext context)
         { return new DeviceRGBColor(components); }
 
         public override SKColor GetColor(Color color, double? alpha = null)
         {
-            DeviceRGBColor spaceColor = (DeviceRGBColor)color;
+            var spaceColor = (DeviceRGBColor)color;
             var skColor = new SKColor(
-               (byte)Math.Round(spaceColor.R * 255),
-               (byte)Math.Round(spaceColor.G * 255),
-               (byte)Math.Round(spaceColor.B * 255));
-            if (alpha != null)
-            {
-                skColor = skColor.WithAlpha((byte)(alpha.Value * 255));
-            }
+               (byte)(spaceColor.R * 255),
+               (byte)(spaceColor.G * 255),
+               (byte)(spaceColor.B * 255),
+               (byte)((alpha ?? 1) * 255));
+
             return skColor;
         }
 
