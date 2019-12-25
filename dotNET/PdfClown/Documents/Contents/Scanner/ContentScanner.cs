@@ -345,11 +345,7 @@ Parent level.
 
             return Current != null;
         }
-        public static int counter = 0;
-        public static string[] blacklist = new[] { "DrawLine", "DrawCurve", "ModifyCTM", "SetLineCap", "SetLineJoin",
-                    "SetLineWidth","Text", "ShowAdjustedText", "SetTextMatrix", "SetWordSpace","SetCharSpace",
-                    "SetFont"
-                };
+        
         /**
           <summary>Moves to the next object.</summary>
           <returns>Whether the next object was successfully reached.</returns>
@@ -360,33 +356,7 @@ Parent level.
             ContentObject currentObject = Current;
             if (currentObject != null)
             {
-                if (counter == 1789)
-                {
-                }
                 currentObject.Scan(state);
-                counter++;
-                var type = currentObject.GetType().Name;
-
-                if (counter >= 1771 && counter < 1802)// !blacklist.Contains(type))
-                {
-                    //Debug.WriteLine($"Scanned {counter} {type}");
-                    //Tools.Renderer.DumpCanvas(renderContext, $"Scanned {counter} {type}.png");
-                }
-                //if (state.AlphaShape is object)
-                //{
-                //    var alphaObject = new FormXObject(state.AlphaShape);
-
-                //    var newState = new GraphicsState(new ContentScanner(alphaObject));
-                //    state.CopyTo(newState);
-
-                //    newState.BlendMode = new[] { BlendModeEnum.Normal };
-                //    newState.Scanner.Render(RenderContext, ContextSize);
-
-                //    //    if (!objects.Contains(state.AlphaShape))
-                //    //    {
-                //    //        objects.Add(state.AlphaShape);
-                //    //    }
-                //}
             }
 
             // Moving to the next object...

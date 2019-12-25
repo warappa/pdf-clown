@@ -225,7 +225,7 @@ namespace PdfClown.Documents.Contents
             var ptr = GCHandle.Alloc(raster, GCHandleType.Pinned);
             var bitmap = new SKBitmap();
             bitmap.InstallPixels(info, ptr.AddrOfPinnedObject(), info.RowBytes, (addr, ctx) => ptr.Free(), null);
-            Tools.Renderer.DumpImage(bitmap, "imageloader.png");
+            //Tools.Renderer.DumpImage(bitmap, "imageloader.png");
             return bitmap;
         }
 
